@@ -267,8 +267,17 @@ function RecipeModal({ recipe, onClose, onAddToPlanner }) {
 
 function Discover({ onOpen, onAddToPlanner }) {
   const [filters, setFilters] = useState({ time: 'Any', protein: 'Any', cuisine: 'Any', calories: 'Any', tag: 'Any' });
+  const [search, setSearch] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const activeFilterCount = Object.values(filters).filter((value) => value !== 'Any').length;
 
   const matches = useMemo(() => recipes.filter((recipe) => {
+    const ingredientText = recipe.ingredients.map((ingredient) => ingredient.item).join(' ');
+    const tagText = (recipe.tags || []).join(' ');
+    const searchText = `${recipe.title} ${recipe.description} ${recipe.protein} ${recipe.cuisine} ${ingredientText} ${tagText}`.toLowerCase();
+    const searchMatch = searchText.includes(search.toLowerCase());
+
     const timeMatch = filters.time === 'Any' ||
       (filters.time === 'Under 20 mins' && recipe.timeMinutes <= 20) ||
       (filters.time === '20-35 mins' && recipe.timeMinutes > 20 && recipe.timeMinutes <= 35) ||
@@ -283,8 +292,8 @@ function Discover({ onOpen, onAddToPlanner }) {
       (filters.calories === '500-650' && recipe.calories >= 500 && recipe.calories <= 650) ||
       (filters.calories === '650+' && recipe.calories > 650);
 
-    return timeMatch && proteinMatch && cuisineMatch && calorieMatch && tagMatch;
-  }), [filters]);
+    return searchMatch && timeMatch && proteinMatch && cuisineMatch && calorieMatch && tagMatch;
+  }), [filters, search]);
 
   function clearFilters() {
     setFilters({ time: 'Any', protein: 'Any', cuisine: 'Any', calories: 'Any', tag: 'Any' });
@@ -292,40 +301,57 @@ function Discover({ onOpen, onAddToPlanner }) {
 
   return (
     <section className="panel">
-      <div className="section-heading section-heading--row">
-        <div>
-          <p className="eyebrow">Decision tree</p>
-          <h2>What kind of dinner do you want?</h2>
+      <div className="discover-toolbar">
+        <input className="search discover-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search recipes..." />
+        <button className="secondary filter-button" onClick={() => setFiltersOpen(true)}>☰ Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</button>
+      </div>
+
+      {filtersOpen && (
+        <div className="filter-panel-backdrop" onClick={() => setFiltersOpen(false)}>
+          <section className="filter-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="filter-panel__handle" />
+            <div className="filter-panel__header">
+              <div>
+                <p className="eyebrow">Filter recipes</p>
+                <h2>Find the right dinner</h2>
+              </div>
+              <button className="secondary" onClick={() => setFiltersOpen(false)}>Close</button>
+            </div>
+            <div className="filter-panel__grid">
+              <label>Time
+                <select value={filters.time} onChange={(event) => setFilters({ ...filters, time: event.target.value })}>
+                  {['Any', 'Under 20 mins', '20-35 mins', '35+ mins', 'Slow cooker / long cook'].map((option) => <option key={option}>{option}</option>)}
+                </select>
+              </label>
+              <label>Protein
+                <select value={filters.protein} onChange={(event) => setFilters({ ...filters, protein: event.target.value })}>
+                  {proteinOptions.map((option) => <option key={option}>{option}</option>)}
+                </select>
+              </label>
+              <label>Cuisine
+                <select value={filters.cuisine} onChange={(event) => setFilters({ ...filters, cuisine: event.target.value })}>
+                  {cuisineOptions.map((option) => <option key={option}>{option}</option>)}
+                </select>
+              </label>
+              <label>Calories
+                <select value={filters.calories} onChange={(event) => setFilters({ ...filters, calories: event.target.value })}>
+                  {['Any', 'Under 500', '500-650', '650+'].map((option) => <option key={option}>{option}</option>)}
+                </select>
+              </label>
+              <label>Meal mood
+                <select value={filters.tag} onChange={(event) => setFilters({ ...filters, tag: event.target.value })}>
+                  {tagOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="filter-panel__actions">
+              <button className="secondary" onClick={clearFilters}>Reset</button>
+              <button onClick={() => setFiltersOpen(false)}>Apply filters</button>
+            </div>
+          </section>
         </div>
-        <button className="secondary" onClick={clearFilters}>Reset filters</button>
-      </div>
-      <div className="filter-grid">
-        <label>Time
-          <select value={filters.time} onChange={(event) => setFilters({ ...filters, time: event.target.value })}>
-            {['Any', 'Under 20 mins', '20-35 mins', '35+ mins', 'Slow cooker / long cook'].map((option) => <option key={option}>{option}</option>)}
-          </select>
-        </label>
-        <label>Protein
-          <select value={filters.protein} onChange={(event) => setFilters({ ...filters, protein: event.target.value })}>
-            {proteinOptions.map((option) => <option key={option}>{option}</option>)}
-          </select>
-        </label>
-        <label>Cuisine
-          <select value={filters.cuisine} onChange={(event) => setFilters({ ...filters, cuisine: event.target.value })}>
-            {cuisineOptions.map((option) => <option key={option}>{option}</option>)}
-          </select>
-        </label>
-        <label>Calories
-          <select value={filters.calories} onChange={(event) => setFilters({ ...filters, calories: event.target.value })}>
-            {['Any', 'Under 500', '500-650', '650+'].map((option) => <option key={option}>{option}</option>)}
-          </select>
-        </label>
-        <label>Meal mood
-          <select value={filters.tag} onChange={(event) => setFilters({ ...filters, tag: event.target.value })}>
-            {tagOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-        </label>
-      </div>
+      )}
+
       <p className="results-count">Showing {matches.length} recipe{matches.length === 1 ? '' : 's'} from {recipes.length} total.</p>
       <div className="recipe-grid">
         {matches.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} onAddToPlanner={onAddToPlanner} />)}
