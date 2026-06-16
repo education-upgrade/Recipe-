@@ -1,0 +1,59 @@
+.notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  background: #e6f0e8;
+  color: #243928;
+  border: 1px solid #cfe0d1;
+  border-radius: 18px;
+  font-weight: 800;
+}
+
+.notice button {
+  padding: 0.5rem 0.8rem;
+}
+
+.button-row,
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.button-row button {
+  flex: 1 1 130px;
+}
+
+.auto-planner {
+  display: grid;
+  gap: 16px;
+  margin: 0 0 22px;
+  padding: 18px;
+  background: #fff9ef;
+  border: 1px solid #e1d8c8;
+  border-radius: 24px;
+}
+
+.auto-planner h3 {
+  margin: 0.2rem 0 0;
+  font-size: 1.35rem;
+}
+
+.auto-planner button {
+  justify-self: start;
+}
+
+.modal-actions .serving-control {
+  margin: 0;
+}
+
+@media (max-width: 650px) {
+  .notice {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
