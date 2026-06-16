@@ -215,6 +215,38 @@ select,
   font-weight: 800;
 }
 
+.serving-control {
+  max-width: 260px;
+  margin: 18px 0 0;
+}
+
+.serving-control--compact {
+  max-width: none;
+  margin: 12px 0 0;
+  grid-template-columns: 1fr 92px;
+  align-items: center;
+}
+
+.serving-control--compact select {
+  padding: 0.55rem 0.7rem;
+}
+
+.planned-meal-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+
+.planned-meal-summary span {
+  background: #e6f0e8;
+  color: #243928;
+  border-radius: 999px;
+  padding: 0.42rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
