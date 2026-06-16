@@ -10,7 +10,9 @@ A clean local-first React prototype for planning family dinners.
 - Clickable recipe cards with full recipe modal
 - Weekly planner for Monday to Sunday
 - Planner saved in browser localStorage
-- Shopping list generated from selected weekly meals
+- Recipes include servings, ingredient quantities and supermarket categories
+- Shopping list combines matching quantities where the item and unit match
+- Shopping list is grouped by supermarket section
 - No API calls, databases or async loading states
 
 ## Run locally
@@ -28,10 +30,10 @@ Then open the local Vite URL shown in the terminal.
 npm run build
 ```
 
-## Next sensible upgrades
+## Current sensible next upgrades
 
-1. Add more recipes and categories.
-2. Add serving sizes and ingredient quantities.
-3. Group shopping list by supermarket section.
+1. Add more recipes and tags such as quick, high protein, low calorie, freezer friendly and fakeaway.
+2. Add serving-size adjustment so ingredients scale up or down.
+3. Add checkboxes for items already in the cupboard.
 4. Add favourites.
 5. Add user accounts/database only after the local prototype is stable.
