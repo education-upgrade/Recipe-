@@ -119,7 +119,61 @@ function getPlannedMeals(planner) {
   }).filter(Boolean);
 }
 
-function RecipeCard({ recipe, onOpen }) {
+function recipeMatchesAutoPlan(recipe, options) {
+  const tagMatch = options.mood === 'Any' || (recipe.tags || []).includes(options.mood);
+  const timeMatch = options.maxTime === 'Any' || recipe.timeMinutes <= Number(options.maxTime);
+  const calorieMatch = options.calories === 'Any' ||
+    (options.calories === 'Under 500' && recipe.calories < 500) ||
+    (options.calories === '500-650' && recipe.calories >= 500 && recipe.calories <= 650) ||
+    (options.calories === '650+' && recipe.calories > 650);
+  return tagMatch && timeMatch && calorieMatch;
+}
+
+function buildAutoPlan(options) {
+  const dinnerCount = Number(options.dinnerCount);
+  const chosen = [];
+  const usedProteins = new Set();
+  const usedCuisines = new Set();
+
+  let candidates = recipes.filter((recipe) => recipeMatchesAutoPlan(recipe, options));
+
+  if (options.includeVegetarian === 'Yes' && !candidates.some((recipe) => recipe.protein === 'Vegetarian')) {
+    candidates = [...candidates, ...recipes.filter((recipe) => recipe.protein === 'Vegetarian')];
+  }
+
+  const vegetarianPick = options.includeVegetarian === 'Yes'
+    ? candidates.find((recipe) => recipe.protein === 'Vegetarian')
+    : null;
+
+  if (vegetarianPick) chosen.push(vegetarianPick);
+
+  const sorted = [...candidates]
+    .filter((recipe) => !chosen.some((item) => item.id === recipe.id))
+    .sort((a, b) => {
+      const aPenalty = (usedProteins.has(a.protein) ? 1 : 0) + (usedCuisines.has(a.cuisine) ? 1 : 0);
+      const bPenalty = (usedProteins.has(b.protein) ? 1 : 0) + (usedCuisines.has(b.cuisine) ? 1 : 0);
+      if (aPenalty !== bPenalty) return aPenalty - bPenalty;
+      return a.timeMinutes - b.timeMinutes;
+    });
+
+  for (const recipe of sorted) {
+    if (chosen.length >= dinnerCount) break;
+    chosen.push(recipe);
+    usedProteins.add(recipe.protein);
+    usedCuisines.add(recipe.cuisine);
+  }
+
+  if (chosen.length < dinnerCount) {
+    for (const recipe of recipes) {
+      if (chosen.length >= dinnerCount) break;
+      if (!chosen.some((item) => item.id === recipe.id)) chosen.push(recipe);
+    }
+  }
+
+  return chosen.slice(0, dinnerCount);
+}
+
+function RecipeCard({ recipe, onOpen, onAddToPlanner }) {
   return (
     <article className="recipe-card">
       <div className="recipe-card__header">
@@ -135,12 +189,15 @@ function RecipeCard({ recipe, onOpen }) {
         <span>{recipe.difficulty}</span>
         {(recipe.tags || []).slice(0, 3).map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
       </div>
-      <button onClick={() => onOpen(recipe)}>Open recipe</button>
+      <div className="button-row">
+        <button onClick={() => onOpen(recipe)}>Open recipe</button>
+        <button className="secondary" onClick={() => onAddToPlanner(recipe)}>Add to planner</button>
+      </div>
     </article>
   );
 }
 
-function RecipeModal({ recipe, onClose }) {
+function RecipeModal({ recipe, onClose, onAddToPlanner }) {
   const [servings, setServings] = useState(recipe?.servings || defaultServings);
 
   if (!recipe) return null;
@@ -159,11 +216,14 @@ function RecipeModal({ recipe, onClose }) {
             {recipe.tags.map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
           </div>
         )}
-        <label className="serving-control">Show ingredients for
-          <select value={servings} onChange={(event) => setServings(Number(event.target.value))}>
-            {servingOptions.map((option) => <option key={option} value={option}>{option} serving{option === 1 ? '' : 's'}</option>)}
-          </select>
-        </label>
+        <div className="modal-actions">
+          <label className="serving-control">Show ingredients for
+            <select value={servings} onChange={(event) => setServings(Number(event.target.value))}>
+              {servingOptions.map((option) => <option key={option} value={option}>{option} serving{option === 1 ? '' : 's'}</option>)}
+            </select>
+          </label>
+          <button onClick={() => onAddToPlanner(recipe)}>Add to weekly planner</button>
+        </div>
         <div className="modal-grid">
           <div>
             <h3>Ingredients</h3>
@@ -183,7 +243,7 @@ function RecipeModal({ recipe, onClose }) {
   );
 }
 
-function Discover({ onOpen }) {
+function Discover({ onOpen, onAddToPlanner }) {
   const [filters, setFilters] = useState({ time: 'Any', protein: 'Any', cuisine: 'Any', calories: 'Any', tag: 'Any' });
 
   const matches = useMemo(() => recipes.filter((recipe) => {
@@ -246,13 +306,13 @@ function Discover({ onOpen }) {
       </div>
       <p className="results-count">Showing {matches.length} recipe{matches.length === 1 ? '' : 's'} from {recipes.length} total.</p>
       <div className="recipe-grid">
-        {matches.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} />)}
+        {matches.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} onAddToPlanner={onAddToPlanner} />)}
       </div>
     </section>
   );
 }
 
-function Recipes({ onOpen }) {
+function Recipes({ onOpen, onAddToPlanner }) {
   const [search, setSearch] = useState('');
   const visibleRecipes = recipes.filter((recipe) => {
     const ingredientText = recipe.ingredients.map((ingredient) => ingredient.item).join(' ');
@@ -270,8 +330,62 @@ function Recipes({ onOpen }) {
       <input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chicken, pasta, fakeaway, Greek, quick..." />
       <p className="results-count">Showing {visibleRecipes.length} of {recipes.length} recipes.</p>
       <div className="recipe-grid">
-        {visibleRecipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} />)}
+        {visibleRecipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} onAddToPlanner={onAddToPlanner} />)}
       </div>
+    </section>
+  );
+}
+
+function AutoPlanner({ setPlanner }) {
+  const [options, setOptions] = useState({ dinnerCount: '5', mood: 'Any', maxTime: '45', calories: 'Any', includeVegetarian: 'Yes' });
+
+  function generatePlan() {
+    const picks = buildAutoPlan(options);
+    const nextPlanner = { ...emptyPlanner };
+    picks.forEach((recipe, index) => {
+      nextPlanner[days[index]] = { recipeId: recipe.id, servings: recipe.servings || defaultServings };
+    });
+    setPlanner(nextPlanner);
+  }
+
+  return (
+    <section className="auto-planner">
+      <div>
+        <p className="eyebrow">Auto meal planner</p>
+        <h3>Build me a week</h3>
+      </div>
+      <div className="filter-grid">
+        <label>Dinners
+          <select value={options.dinnerCount} onChange={(event) => setOptions({ ...options, dinnerCount: event.target.value })}>
+            {[3, 4, 5, 6, 7].map((count) => <option key={count} value={count}>{count}</option>)}
+          </select>
+        </label>
+        <label>Mood
+          <select value={options.mood} onChange={(event) => setOptions({ ...options, mood: event.target.value })}>
+            {tagOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        <label>Max time
+          <select value={options.maxTime} onChange={(event) => setOptions({ ...options, maxTime: event.target.value })}>
+            <option value="Any">Any</option>
+            <option value="25">25 mins</option>
+            <option value="35">35 mins</option>
+            <option value="45">45 mins</option>
+            <option value="60">60 mins</option>
+          </select>
+        </label>
+        <label>Calories
+          <select value={options.calories} onChange={(event) => setOptions({ ...options, calories: event.target.value })}>
+            {['Any', 'Under 500', '500-650', '650+'].map((option) => <option key={option}>{option}</option>)}
+          </select>
+        </label>
+        <label>Include vegetarian
+          <select value={options.includeVegetarian} onChange={(event) => setOptions({ ...options, includeVegetarian: event.target.value })}>
+            {['Yes', 'No'].map((option) => <option key={option}>{option}</option>)}
+          </select>
+        </label>
+      </div>
+      <button onClick={generatePlan}>Auto-plan my week</button>
     </section>
   );
 }
@@ -299,6 +413,7 @@ function Planner({ planner, setPlanner }) {
         </div>
         <button className="secondary" onClick={clearPlanner}>Clear week</button>
       </div>
+      <AutoPlanner setPlanner={setPlanner} />
       <div className="planner-grid">
         {days.map((day) => {
           const entry = planner[day];
@@ -367,18 +482,34 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('Discover');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [planner, setPlanner] = useState(readPlanner);
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     localStorage.setItem('familyDinnerPlanner', JSON.stringify(planner));
   }, [planner]);
+
+  function addRecipeToPlanner(recipe) {
+    const firstEmptyDay = days.find((day) => !planner[day].recipeId);
+    const targetDay = firstEmptyDay || days[0];
+    setPlanner({ ...planner, [targetDay]: { recipeId: recipe.id, servings: recipe.servings || defaultServings } });
+    setNotice(firstEmptyDay ? `${recipe.title} added to ${targetDay}.` : `${recipe.title} replaced Monday's dinner.`);
+    setActiveTab('Weekly Planner');
+  }
 
   return (
     <main>
       <header className="hero">
         <p className="eyebrow">Family Dinner Planner</p>
         <h1>Choose dinners, plan your week and build a shopping list.</h1>
-        <p>{recipes.length} recipes, adjustable servings, scaled ingredients, smart tags and supermarket sections.</p>
+        <p>{recipes.length} recipes, adjustable servings, scaled ingredients, smart tags, auto-planning and supermarket sections.</p>
       </header>
+
+      {notice && (
+        <div className="notice">
+          <span>{notice}</span>
+          <button className="secondary" onClick={() => setNotice('')}>Dismiss</button>
+        </div>
+      )}
 
       <nav className="tabs" aria-label="Main navigation">
         {['Discover', 'Recipes', 'Weekly Planner', 'Shopping List'].map((tab) => (
@@ -386,12 +517,12 @@ export default function App() {
         ))}
       </nav>
 
-      {activeTab === 'Discover' && <Discover onOpen={setSelectedRecipe} />}
-      {activeTab === 'Recipes' && <Recipes onOpen={setSelectedRecipe} />}
+      {activeTab === 'Discover' && <Discover onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}
+      {activeTab === 'Recipes' && <Recipes onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}
       {activeTab === 'Weekly Planner' && <Planner planner={planner} setPlanner={setPlanner} />}
       {activeTab === 'Shopping List' && <ShoppingList planner={planner} />}
 
-      <RecipeModal key={selectedRecipe?.id || 'empty'} recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />
+      <RecipeModal key={selectedRecipe?.id || 'empty'} recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} onAddToPlanner={addRecipeToPlanner} />
     </main>
   );
 }
