@@ -6,6 +6,7 @@ import './plannerExtras.css'
 import './referenceLayout.css'
 import './tightMobile.css'
 import './filterPanel.css'
+import './twoColumnCards.css'
 
 const rootElement = globalThis.document.getElementById('root')
 createRoot(rootElement).render(<App />)
