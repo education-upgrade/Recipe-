@@ -113,9 +113,107 @@
   font-weight: 900;
 }
 
+.recipe-card {
+  position: relative;
+  gap: 14px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fffdf8 0%, #fff8ee 100%);
+}
+
+.recipe-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary), var(--butter), var(--sage));
+}
+
+.recipe-card__header {
+  padding-top: 4px;
+}
+
+.recipe-card h3 {
+  max-width: 78%;
+  font-size: 1.28rem;
+  line-height: 1.12;
+}
+
+.recipe-card__header span {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 8px 16px rgba(184, 72, 44, 0.18);
+}
+
+.recipe-card p {
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+.recipe-card .tag-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 6px 0 0;
+}
+
+.recipe-card .tag-row span {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 0.48rem 0.4rem;
+  border-radius: 16px;
+  background: white;
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 0.73rem;
+  line-height: 1.15;
+}
+
+.recipe-card .tag-row span:nth-child(1),
+.recipe-card .tag-row span:nth-child(2) {
+  background: var(--sage-soft);
+  color: var(--sage-dark);
+  border-color: #cadcc9;
+}
+
+.recipe-card .tag-row span:nth-child(3),
+.recipe-card .tag-row span:nth-child(4),
+.recipe-card .tag-row span:nth-child(5) {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  border-color: rgba(184, 72, 44, 0.12);
+  font-weight: 900;
+}
+
+.recipe-card .button-row {
+  margin-top: 4px;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 9px;
+}
+
+.recipe-card .button-row button {
+  padding: 0.82rem 0.85rem;
+}
+
+.recipe-card .button-row button.secondary {
+  background: white;
+  color: var(--primary-dark);
+  border-color: rgba(184, 72, 44, 0.22);
+}
+
 @media (max-width: 650px) {
   .notice {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .recipe-card .tag-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recipe-card .button-row {
+    grid-template-columns: 1fr;
   }
 }
