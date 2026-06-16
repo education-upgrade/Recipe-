@@ -403,7 +403,7 @@ function AutoPlanner({ setPlanner }) {
   );
 }
 
-function Planner({ planner, setPlanner }) {
+function Planner({ planner, setPlanner, onOpen }) {
   function updateRecipe(day, recipeId) {
     const recipe = recipes.find((item) => item.id === recipeId);
     setPlanner({ ...planner, [day]: { recipeId, servings: recipe?.servings || defaultServings } });
@@ -446,6 +446,7 @@ function Planner({ planner, setPlanner }) {
                     </select>
                   </label>
                   <p>{selectedRecipe.timeMinutes} mins · {selectedRecipe.calories} kcal per serving · planned for {entry.servings}</p>
+                  <button className="secondary" onClick={() => onOpen(selectedRecipe)}>Open recipe</button>
                 </>
               )}
             </article>
@@ -532,7 +533,7 @@ export default function App() {
 
       {activeTab === 'Discover' && <Discover onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}
       {activeTab === 'Recipes' && <Recipes onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}
-      {activeTab === 'Weekly Planner' && <Planner planner={planner} setPlanner={setPlanner} />}
+      {activeTab === 'Weekly Planner' && <Planner planner={planner} setPlanner={setPlanner} onOpen={setSelectedRecipe} />}
       {activeTab === 'Shopping List' && <ShoppingList planner={planner} />}
 
       <RecipeModal key={selectedRecipe?.id || 'empty'} recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} onAddToPlanner={addRecipeToPlanner} />
