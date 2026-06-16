@@ -58,6 +58,15 @@ function readPlanner() {
   }
 }
 
+function readCheckedShopping() {
+  try {
+    const saved = localStorage.getItem('familyDinnerShoppingChecked');
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
 function normaliseIngredient(ingredient) {
   return `${ingredient.item}|${ingredient.unit}`.trim().toLowerCase();
 }
@@ -457,22 +466,29 @@ function Planner({ planner, setPlanner, onOpen }) {
   );
 }
 
-function ShoppingList({ planner }) {
+function ShoppingList({ planner, checkedShopping, onCheckItem, onResetChecked }) {
   const plannedMeals = getPlannedMeals(planner);
   const ingredients = combineIngredients(plannedMeals);
-  const groupedIngredients = groupIngredients(ingredients);
+  const visibleIngredients = ingredients.filter((ingredient) => !checkedShopping[normaliseIngredient(ingredient)]);
+  const groupedIngredients = groupIngredients(visibleIngredients);
+  const hiddenCount = ingredients.length - visibleIngredients.length;
 
   return (
     <section className="panel">
-      <div className="section-heading">
-        <p className="eyebrow">Shopping list</p>
-        <h2>Generated from your planner</h2>
+      <div className="section-heading section-heading--row">
+        <div>
+          <p className="eyebrow">Shopping list</p>
+          <h2>Generated from your planner</h2>
+        </div>
+        {hiddenCount > 0 && <button className="secondary" onClick={onResetChecked}>Reset hidden items</button>}
       </div>
       {plannedMeals.length === 0 ? (
         <div className="empty-state">Add dinners to the weekly planner and your shopping list will appear here.</div>
+      ) : visibleIngredients.length === 0 ? (
+        <div className="empty-state">All shopping items have been ticked off. Use reset hidden items to bring the list back.</div>
       ) : (
         <>
-          <p className="results-count">Based on {plannedMeals.length} planned dinner{plannedMeals.length === 1 ? '' : 's'}. Ingredient quantities are scaled to your chosen servings.</p>
+          <p className="results-count">Based on {plannedMeals.length} planned dinner{plannedMeals.length === 1 ? '' : 's'}. Tick an item once bought to remove it from the list.</p>
           <div className="planned-meal-summary">
             {plannedMeals.map((meal) => <span key={meal.day}>{meal.day}: {meal.recipe.title} for {meal.servings}</span>)}
           </div>
@@ -480,8 +496,15 @@ function ShoppingList({ planner }) {
             {groupedIngredients.map((group) => (
               <section className="shopping-group" key={group.category}>
                 <h3>{group.category}</h3>
-                <ul className="shopping-list">
-                  {group.items.map((ingredient) => <li key={`${ingredient.item}-${ingredient.unit}`}>{formatIngredient(ingredient)}</li>)}
+                <ul className="shopping-list shopping-list--interactive">
+                  {group.items.map((ingredient) => (
+                    <li key={`${ingredient.item}-${ingredient.unit}`}>
+                      <button className="shopping-check" onClick={() => onCheckItem(ingredient)} aria-label={`Mark ${ingredient.item} as bought`}>
+                        <span className="shopping-checkbox">✓</span>
+                        <span>{formatIngredient(ingredient)}</span>
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               </section>
             ))}
@@ -497,10 +520,15 @@ export default function App() {
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [planner, setPlanner] = useState(readPlanner);
   const [notice, setNotice] = useState('');
+  const [checkedShopping, setCheckedShopping] = useState(readCheckedShopping);
 
   useEffect(() => {
     localStorage.setItem('familyDinnerPlanner', JSON.stringify(planner));
   }, [planner]);
+
+  useEffect(() => {
+    localStorage.setItem('familyDinnerShoppingChecked', JSON.stringify(checkedShopping));
+  }, [checkedShopping]);
 
   function addRecipeToPlanner(recipe) {
     const firstEmptyDay = days.find((day) => !planner[day].recipeId);
@@ -508,6 +536,14 @@ export default function App() {
     setPlanner({ ...planner, [targetDay]: { recipeId: recipe.id, servings: recipe.servings || defaultServings } });
     setNotice(firstEmptyDay ? `${recipe.title} added to ${targetDay}.` : `${recipe.title} replaced Monday's dinner.`);
     setActiveTab('Weekly Planner');
+  }
+
+  function checkShoppingItem(ingredient) {
+    setCheckedShopping({ ...checkedShopping, [normaliseIngredient(ingredient)]: true });
+  }
+
+  function resetCheckedShopping() {
+    setCheckedShopping({});
   }
 
   return (
@@ -534,7 +570,7 @@ export default function App() {
       {activeTab === 'Discover' && <Discover onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}
       {activeTab === 'Recipes' && <Recipes onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}
       {activeTab === 'Weekly Planner' && <Planner planner={planner} setPlanner={setPlanner} onOpen={setSelectedRecipe} />}
-      {activeTab === 'Shopping List' && <ShoppingList planner={planner} />}
+      {activeTab === 'Shopping List' && <ShoppingList planner={planner} checkedShopping={checkedShopping} onCheckItem={checkShoppingItem} onResetChecked={resetCheckedShopping} />}
 
       <RecipeModal key={selectedRecipe?.id || 'empty'} recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} onAddToPlanner={addRecipeToPlanner} />
     </main>
