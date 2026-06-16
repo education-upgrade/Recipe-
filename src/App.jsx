@@ -1,11 +1,33 @@
 import { useEffect, useMemo, useState } from 'react';
-import { recipes } from './recipes.js';
+import { recipes as baseRecipes } from './recipes.js';
+import { extraRecipes } from './extraRecipes.js';
 
+const recipes = [...baseRecipes, ...extraRecipes];
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const defaultServings = 4;
 const servingOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 const emptyPlanner = Object.fromEntries(days.map((day) => [day, { recipeId: '', servings: defaultServings }]));
 const categoryOrder = ['Meat & fish', 'Fruit & veg', 'Dairy', 'Carbs', 'Tins, jars & packets', 'Frozen', 'Herbs, spices & sauces', 'Other'];
+const proteinOptions = ['Any', ...Array.from(new Set(recipes.map((recipe) => recipe.protein))).sort()];
+const cuisineOptions = ['Any', ...Array.from(new Set(recipes.map((recipe) => recipe.cuisine))).sort()];
+const tagOptions = [
+  ['Any', 'Any'],
+  ['quick', 'Quick'],
+  ['high-protein', 'High protein'],
+  ['lighter', 'Lighter'],
+  ['comfort-food', 'Comfort food'],
+  ['fakeaway', 'Fakeaway'],
+  ['one-pan', 'One pan'],
+  ['batch-cook', 'Batch cook'],
+  ['slow-cooker', 'Slow cooker'],
+  ['vegetarian', 'Vegetarian'],
+  ['family-friendly', 'Family friendly'],
+  ['weekend-cooking', 'Weekend cooking'],
+  ['summer', 'Summer'],
+  ['winter', 'Winter'],
+  ['pizza-night', 'Pizza night'],
+  ['sharing', 'Sharing']
+];
 
 function normalisePlanner(rawPlanner) {
   return Object.fromEntries(days.map((day) => {
@@ -53,6 +75,10 @@ function formatIngredient(ingredient) {
   return amount ? `${ingredient.item} — ${amount}` : ingredient.item;
 }
 
+function formatTag(tag) {
+  return tag.split('-').map((word) => word[0].toUpperCase() + word.slice(1)).join(' ');
+}
+
 function scaleIngredient(ingredient, recipeServings, targetServings) {
   const scale = targetServings / recipeServings;
   return {
@@ -98,7 +124,7 @@ function RecipeCard({ recipe, onOpen }) {
     <article className="recipe-card">
       <div className="recipe-card__header">
         <h3>{recipe.title}</h3>
-        <span>{recipe.timeMinutes} mins</span>
+        <span>{recipe.timeMinutes >= 120 ? 'Slow' : `${recipe.timeMinutes} mins`}</span>
       </div>
       <p>{recipe.description}</p>
       <div className="tag-row">
@@ -107,6 +133,7 @@ function RecipeCard({ recipe, onOpen }) {
         <span>{recipe.calories} kcal</span>
         <span>Serves {recipe.servings}</span>
         <span>{recipe.difficulty}</span>
+        {(recipe.tags || []).slice(0, 3).map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
       </div>
       <button onClick={() => onOpen(recipe)}>Open recipe</button>
     </article>
@@ -127,6 +154,11 @@ function RecipeModal({ recipe, onClose }) {
         <p className="eyebrow">{recipe.protein} · {recipe.cuisine} · {recipe.timeMinutes} mins · Base recipe serves {recipe.servings}</p>
         <h2>{recipe.title}</h2>
         <p>{recipe.description}</p>
+        {(recipe.tags || []).length > 0 && (
+          <div className="tag-row tag-row--modal">
+            {recipe.tags.map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
+          </div>
+        )}
         <label className="serving-control">Show ingredients for
           <select value={servings} onChange={(event) => setServings(Number(event.target.value))}>
             {servingOptions.map((option) => <option key={option} value={option}>{option} serving{option === 1 ? '' : 's'}</option>)}
@@ -152,44 +184,53 @@ function RecipeModal({ recipe, onClose }) {
 }
 
 function Discover({ onOpen }) {
-  const [filters, setFilters] = useState({ time: 'Any', protein: 'Any', cuisine: 'Any', calories: 'Any' });
+  const [filters, setFilters] = useState({ time: 'Any', protein: 'Any', cuisine: 'Any', calories: 'Any', tag: 'Any' });
 
   const matches = useMemo(() => recipes.filter((recipe) => {
     const timeMatch = filters.time === 'Any' ||
       (filters.time === 'Under 20 mins' && recipe.timeMinutes <= 20) ||
       (filters.time === '20-35 mins' && recipe.timeMinutes > 20 && recipe.timeMinutes <= 35) ||
-      (filters.time === '35+ mins' && recipe.timeMinutes > 35);
+      (filters.time === '35+ mins' && recipe.timeMinutes > 35 && recipe.timeMinutes < 120) ||
+      (filters.time === 'Slow cooker / long cook' && recipe.timeMinutes >= 120);
 
     const proteinMatch = filters.protein === 'Any' || recipe.protein === filters.protein;
     const cuisineMatch = filters.cuisine === 'Any' || recipe.cuisine === filters.cuisine;
+    const tagMatch = filters.tag === 'Any' || (recipe.tags || []).includes(filters.tag);
     const calorieMatch = filters.calories === 'Any' ||
       (filters.calories === 'Under 500' && recipe.calories < 500) ||
       (filters.calories === '500-650' && recipe.calories >= 500 && recipe.calories <= 650) ||
       (filters.calories === '650+' && recipe.calories > 650);
 
-    return timeMatch && proteinMatch && cuisineMatch && calorieMatch;
+    return timeMatch && proteinMatch && cuisineMatch && calorieMatch && tagMatch;
   }), [filters]);
+
+  function clearFilters() {
+    setFilters({ time: 'Any', protein: 'Any', cuisine: 'Any', calories: 'Any', tag: 'Any' });
+  }
 
   return (
     <section className="panel">
-      <div className="section-heading">
-        <p className="eyebrow">Decision tree</p>
-        <h2>What kind of dinner do you want?</h2>
+      <div className="section-heading section-heading--row">
+        <div>
+          <p className="eyebrow">Decision tree</p>
+          <h2>What kind of dinner do you want?</h2>
+        </div>
+        <button className="secondary" onClick={clearFilters}>Reset filters</button>
       </div>
       <div className="filter-grid">
         <label>Time
           <select value={filters.time} onChange={(event) => setFilters({ ...filters, time: event.target.value })}>
-            {['Any', 'Under 20 mins', '20-35 mins', '35+ mins'].map((option) => <option key={option}>{option}</option>)}
+            {['Any', 'Under 20 mins', '20-35 mins', '35+ mins', 'Slow cooker / long cook'].map((option) => <option key={option}>{option}</option>)}
           </select>
         </label>
         <label>Protein
           <select value={filters.protein} onChange={(event) => setFilters({ ...filters, protein: event.target.value })}>
-            {['Any', 'Chicken', 'Beef', 'Pork', 'Fish', 'Turkey', 'Lamb', 'Vegetarian'].map((option) => <option key={option}>{option}</option>)}
+            {proteinOptions.map((option) => <option key={option}>{option}</option>)}
           </select>
         </label>
         <label>Cuisine
           <select value={filters.cuisine} onChange={(event) => setFilters({ ...filters, cuisine: event.target.value })}>
-            {['Any', 'British', 'Italian', 'Mexican', 'Indian', 'Asian', 'Mediterranean', 'American'].map((option) => <option key={option}>{option}</option>)}
+            {cuisineOptions.map((option) => <option key={option}>{option}</option>)}
           </select>
         </label>
         <label>Calories
@@ -197,8 +238,13 @@ function Discover({ onOpen }) {
             {['Any', 'Under 500', '500-650', '650+'].map((option) => <option key={option}>{option}</option>)}
           </select>
         </label>
+        <label>Meal mood
+          <select value={filters.tag} onChange={(event) => setFilters({ ...filters, tag: event.target.value })}>
+            {tagOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
       </div>
-      <p className="results-count">Showing {matches.length} recipe{matches.length === 1 ? '' : 's'}.</p>
+      <p className="results-count">Showing {matches.length} recipe{matches.length === 1 ? '' : 's'} from {recipes.length} total.</p>
       <div className="recipe-grid">
         {matches.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} />)}
       </div>
@@ -210,7 +256,8 @@ function Recipes({ onOpen }) {
   const [search, setSearch] = useState('');
   const visibleRecipes = recipes.filter((recipe) => {
     const ingredientText = recipe.ingredients.map((ingredient) => ingredient.item).join(' ');
-    const text = `${recipe.title} ${recipe.description} ${recipe.protein} ${recipe.cuisine} ${ingredientText}`.toLowerCase();
+    const tagText = (recipe.tags || []).join(' ');
+    const text = `${recipe.title} ${recipe.description} ${recipe.protein} ${recipe.cuisine} ${ingredientText} ${tagText}`.toLowerCase();
     return text.includes(search.toLowerCase());
   });
 
@@ -220,7 +267,7 @@ function Recipes({ onOpen }) {
         <p className="eyebrow">Recipe library</p>
         <h2>All family dinners</h2>
       </div>
-      <input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chicken, pasta, Mexican, quick..." />
+      <input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chicken, pasta, fakeaway, Greek, quick..." />
       <p className="results-count">Showing {visibleRecipes.length} of {recipes.length} recipes.</p>
       <div className="recipe-grid">
         {visibleRecipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} />)}
@@ -330,7 +377,7 @@ export default function App() {
       <header className="hero">
         <p className="eyebrow">Family Dinner Planner</p>
         <h1>Choose dinners, plan your week and build a shopping list.</h1>
-        <p>Now with adjustable servings, scaled ingredients, combined totals and supermarket sections.</p>
+        <p>{recipes.length} recipes, adjustable servings, scaled ingredients, smart tags and supermarket sections.</p>
       </header>
 
       <nav className="tabs" aria-label="Main navigation">
