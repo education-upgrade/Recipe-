@@ -33,18 +33,10 @@ const tagOptions = [
 function normalisePlanner(rawPlanner) {
   return Object.fromEntries(days.map((day) => {
     const savedDay = rawPlanner?.[day];
-
-    if (typeof savedDay === 'string') {
-      return [day, { recipeId: savedDay, servings: defaultServings }];
-    }
-
+    if (typeof savedDay === 'string') return [day, { recipeId: savedDay, servings: defaultServings }];
     if (savedDay && typeof savedDay === 'object') {
-      return [day, {
-        recipeId: savedDay.recipeId || '',
-        servings: Number(savedDay.servings) || defaultServings,
-      }];
+      return [day, { recipeId: savedDay.recipeId || '', servings: Number(savedDay.servings) || defaultServings }];
     }
-
     return [day, { recipeId: '', servings: defaultServings }];
   }));
 }
@@ -91,34 +83,22 @@ function formatTag(tag) {
 
 function scaleIngredient(ingredient, recipeServings, targetServings) {
   const scale = targetServings / recipeServings;
-  return {
-    ...ingredient,
-    quantity: ingredient.quantity ? ingredient.quantity * scale : ingredient.quantity,
-  };
+  return { ...ingredient, quantity: ingredient.quantity ? ingredient.quantity * scale : ingredient.quantity };
 }
 
 function combineIngredients(plannedMeals) {
   const combined = new Map();
-
   plannedMeals.flatMap((meal) => meal.recipe.ingredients.map((ingredient) => scaleIngredient(ingredient, meal.recipe.servings, meal.servings))).forEach((ingredient) => {
     const key = normaliseIngredient(ingredient);
     const existing = combined.get(key);
-
-    if (existing) {
-      existing.quantity += ingredient.quantity || 0;
-    } else {
-      combined.set(key, { ...ingredient, category: ingredient.category || 'Other' });
-    }
+    if (existing) existing.quantity += ingredient.quantity || 0;
+    else combined.set(key, { ...ingredient, category: ingredient.category || 'Other' });
   });
-
   return [...combined.values()].sort((a, b) => a.item.localeCompare(b.item));
 }
 
 function groupIngredients(ingredients) {
-  return categoryOrder.map((category) => ({
-    category,
-    items: ingredients.filter((ingredient) => ingredient.category === category),
-  })).filter((group) => group.items.length > 0);
+  return categoryOrder.map((category) => ({ category, items: ingredients.filter((ingredient) => ingredient.category === category) })).filter((group) => group.items.length > 0);
 }
 
 function getPlannedMeals(planner) {
@@ -144,48 +124,35 @@ function buildAutoPlan(options) {
   const chosen = [];
   const usedProteins = new Set();
   const usedCuisines = new Set();
-
   let candidates = recipes.filter((recipe) => recipeMatchesAutoPlan(recipe, options));
-
   if (options.includeVegetarian === 'Yes' && !candidates.some((recipe) => recipe.protein === 'Vegetarian')) {
     candidates = [...candidates, ...recipes.filter((recipe) => recipe.protein === 'Vegetarian')];
   }
-
-  const vegetarianPick = options.includeVegetarian === 'Yes'
-    ? candidates.find((recipe) => recipe.protein === 'Vegetarian')
-    : null;
-
+  const vegetarianPick = options.includeVegetarian === 'Yes' ? candidates.find((recipe) => recipe.protein === 'Vegetarian') : null;
   if (vegetarianPick) chosen.push(vegetarianPick);
-
-  const sorted = [...candidates]
-    .filter((recipe) => !chosen.some((item) => item.id === recipe.id))
-    .sort((a, b) => {
-      const aPenalty = (usedProteins.has(a.protein) ? 1 : 0) + (usedCuisines.has(a.cuisine) ? 1 : 0);
-      const bPenalty = (usedProteins.has(b.protein) ? 1 : 0) + (usedCuisines.has(b.cuisine) ? 1 : 0);
-      if (aPenalty !== bPenalty) return aPenalty - bPenalty;
-      return a.timeMinutes - b.timeMinutes;
-    });
-
+  const sorted = [...candidates].filter((recipe) => !chosen.some((item) => item.id === recipe.id)).sort((a, b) => {
+    const aPenalty = (usedProteins.has(a.protein) ? 1 : 0) + (usedCuisines.has(a.cuisine) ? 1 : 0);
+    const bPenalty = (usedProteins.has(b.protein) ? 1 : 0) + (usedCuisines.has(b.cuisine) ? 1 : 0);
+    if (aPenalty !== bPenalty) return aPenalty - bPenalty;
+    return a.timeMinutes - b.timeMinutes;
+  });
   for (const recipe of sorted) {
     if (chosen.length >= dinnerCount) break;
     chosen.push(recipe);
     usedProteins.add(recipe.protein);
     usedCuisines.add(recipe.cuisine);
   }
-
   if (chosen.length < dinnerCount) {
     for (const recipe of recipes) {
       if (chosen.length >= dinnerCount) break;
       if (!chosen.some((item) => item.id === recipe.id)) chosen.push(recipe);
     }
   }
-
   return chosen.slice(0, dinnerCount);
 }
 
 function RecipeCard({ recipe, onOpen, onAddToPlanner }) {
   const nutrition = getRecipeNutrition(recipe, recipe.servings);
-
   return (
     <article className="recipe-card">
       <div className="recipe-card__header">
@@ -193,15 +160,15 @@ function RecipeCard({ recipe, onOpen, onAddToPlanner }) {
         <span>{recipe.timeMinutes >= 120 ? 'Slow' : `${recipe.timeMinutes} mins`}</span>
       </div>
       <p>{recipe.description}</p>
-      <div className="tag-row">
+      <div className="recipe-stats" aria-label="Recipe summary">
+        <div><span className="stat-icon">🔥</span><strong>{recipe.calories}</strong><small>kcal</small></div>
+        <div><span className="stat-icon">💪</span><strong>{nutrition.proteinPerServing}g</strong><small>protein</small></div>
+        <div><span className="stat-icon">🌿</span><strong>{nutrition.fiveADayPerServing}</strong><small>of 5-a-day</small></div>
+      </div>
+      <div className="tag-row card-pills">
         <span>{recipe.protein}</span>
         <span>{recipe.cuisine}</span>
-        <span>{recipe.calories} kcal</span>
-        <span>{nutrition.proteinPerServing}g protein</span>
-        <span>{nutrition.fiveADayPerServing} of 5-a-day</span>
-        <span>Serves {recipe.servings}</span>
-        <span>{recipe.difficulty}</span>
-        {(recipe.tags || []).slice(0, 2).map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
+        {(recipe.tags || []).slice(0, 1).map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
       </div>
       <div className="button-row">
         <button onClick={() => onOpen(recipe)}>Open recipe</button>
@@ -213,13 +180,10 @@ function RecipeCard({ recipe, onOpen, onAddToPlanner }) {
 
 function RecipeModal({ recipe, onClose, onAddToPlanner }) {
   const [servings, setServings] = useState(recipe?.servings || defaultServings);
-
   if (!recipe) return null;
-
   const scaledIngredients = recipe.ingredients.map((ingredient) => scaleIngredient(ingredient, recipe.servings, servings));
   const detailedMethod = getDetailedMethod(recipe);
   const nutrition = getRecipeNutrition(recipe, servings);
-
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <section className="modal" onClick={(event) => event.stopPropagation()}>
@@ -233,11 +197,7 @@ function RecipeModal({ recipe, onClose, onAddToPlanner }) {
           <div><strong>{nutrition.fiveADayPerServing}</strong><span>of your 5-a-day</span></div>
           <div><strong>{servings}</strong><span>planned servings</span></div>
         </div>
-        {(recipe.tags || []).length > 0 && (
-          <div className="tag-row tag-row--modal">
-            {recipe.tags.map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
-          </div>
-        )}
+        {(recipe.tags || []).length > 0 && <div className="tag-row tag-row--modal">{recipe.tags.map((tag) => <span key={tag}>{formatTag(tag)}</span>)}</div>}
         <div className="modal-actions">
           <label className="serving-control">Show ingredients for
             <select value={servings} onChange={(event) => setServings(Number(event.target.value))}>
@@ -247,18 +207,8 @@ function RecipeModal({ recipe, onClose, onAddToPlanner }) {
           <button onClick={() => onAddToPlanner(recipe)}>Add to weekly planner</button>
         </div>
         <div className="modal-grid">
-          <div>
-            <h3>Ingredients</h3>
-            <ul>
-              {scaledIngredients.map((ingredient) => <li key={`${ingredient.item}-${ingredient.unit}`}>{formatIngredient(ingredient)}</li>)}
-            </ul>
-          </div>
-          <div>
-            <h3>Detailed method</h3>
-            <ol>
-              {detailedMethod.map((step) => <li key={step}>{step}</li>)}
-            </ol>
-          </div>
+          <div><h3>Ingredients</h3><ul>{scaledIngredients.map((ingredient) => <li key={`${ingredient.item}-${ingredient.unit}`}>{formatIngredient(ingredient)}</li>)}</ul></div>
+          <div><h3>Detailed method</h3><ol>{detailedMethod.map((step) => <li key={step}>{step}</li>)}</ol></div>
         </div>
       </section>
     </div>
@@ -269,21 +219,17 @@ function Discover({ onOpen, onAddToPlanner }) {
   const [filters, setFilters] = useState({ time: 'Any', protein: 'Any', cuisine: 'Any', calories: 'Any', tag: 'Any' });
   const [search, setSearch] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
-
   const activeFilterCount = Object.values(filters).filter((value) => value !== 'Any').length;
-
   const matches = useMemo(() => recipes.filter((recipe) => {
     const ingredientText = recipe.ingredients.map((ingredient) => ingredient.item).join(' ');
     const tagText = (recipe.tags || []).join(' ');
     const searchText = `${recipe.title} ${recipe.description} ${recipe.protein} ${recipe.cuisine} ${ingredientText} ${tagText}`.toLowerCase();
     const searchMatch = searchText.includes(search.toLowerCase());
-
     const timeMatch = filters.time === 'Any' ||
       (filters.time === 'Under 20 mins' && recipe.timeMinutes <= 20) ||
       (filters.time === '20-35 mins' && recipe.timeMinutes > 20 && recipe.timeMinutes <= 35) ||
       (filters.time === '35+ mins' && recipe.timeMinutes > 35 && recipe.timeMinutes < 120) ||
       (filters.time === 'Slow cooker / long cook' && recipe.timeMinutes >= 120);
-
     const proteinMatch = filters.protein === 'Any' || recipe.protein === filters.protein;
     const cuisineMatch = filters.cuisine === 'Any' || recipe.cuisine === filters.cuisine;
     const tagMatch = filters.tag === 'Any' || (recipe.tags || []).includes(filters.tag);
@@ -291,71 +237,33 @@ function Discover({ onOpen, onAddToPlanner }) {
       (filters.calories === 'Under 500' && recipe.calories < 500) ||
       (filters.calories === '500-650' && recipe.calories >= 500 && recipe.calories <= 650) ||
       (filters.calories === '650+' && recipe.calories > 650);
-
     return searchMatch && timeMatch && proteinMatch && cuisineMatch && calorieMatch && tagMatch;
   }), [filters, search]);
-
-  function clearFilters() {
-    setFilters({ time: 'Any', protein: 'Any', cuisine: 'Any', calories: 'Any', tag: 'Any' });
-  }
-
+  function clearFilters() { setFilters({ time: 'Any', protein: 'Any', cuisine: 'Any', calories: 'Any', tag: 'Any' }); }
   return (
     <section className="panel">
       <div className="discover-toolbar">
         <input className="search discover-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search recipes..." />
         <button className="secondary filter-button" onClick={() => setFiltersOpen(true)}>☰ Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</button>
       </div>
-
       {filtersOpen && (
         <div className="filter-panel-backdrop" onClick={() => setFiltersOpen(false)}>
           <section className="filter-panel" onClick={(event) => event.stopPropagation()}>
             <div className="filter-panel__handle" />
-            <div className="filter-panel__header">
-              <div>
-                <p className="eyebrow">Filter recipes</p>
-                <h2>Find the right dinner</h2>
-              </div>
-              <button className="secondary" onClick={() => setFiltersOpen(false)}>Close</button>
-            </div>
+            <div className="filter-panel__header"><div><p className="eyebrow">Filter recipes</p><h2>Find the right dinner</h2></div><button className="secondary" onClick={() => setFiltersOpen(false)}>Close</button></div>
             <div className="filter-panel__grid">
-              <label>Time
-                <select value={filters.time} onChange={(event) => setFilters({ ...filters, time: event.target.value })}>
-                  {['Any', 'Under 20 mins', '20-35 mins', '35+ mins', 'Slow cooker / long cook'].map((option) => <option key={option}>{option}</option>)}
-                </select>
-              </label>
-              <label>Protein
-                <select value={filters.protein} onChange={(event) => setFilters({ ...filters, protein: event.target.value })}>
-                  {proteinOptions.map((option) => <option key={option}>{option}</option>)}
-                </select>
-              </label>
-              <label>Cuisine
-                <select value={filters.cuisine} onChange={(event) => setFilters({ ...filters, cuisine: event.target.value })}>
-                  {cuisineOptions.map((option) => <option key={option}>{option}</option>)}
-                </select>
-              </label>
-              <label>Calories
-                <select value={filters.calories} onChange={(event) => setFilters({ ...filters, calories: event.target.value })}>
-                  {['Any', 'Under 500', '500-650', '650+'].map((option) => <option key={option}>{option}</option>)}
-                </select>
-              </label>
-              <label>Meal mood
-                <select value={filters.tag} onChange={(event) => setFilters({ ...filters, tag: event.target.value })}>
-                  {tagOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
+              <label>Time<select value={filters.time} onChange={(event) => setFilters({ ...filters, time: event.target.value })}>{['Any', 'Under 20 mins', '20-35 mins', '35+ mins', 'Slow cooker / long cook'].map((option) => <option key={option}>{option}</option>)}</select></label>
+              <label>Protein<select value={filters.protein} onChange={(event) => setFilters({ ...filters, protein: event.target.value })}>{proteinOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
+              <label>Cuisine<select value={filters.cuisine} onChange={(event) => setFilters({ ...filters, cuisine: event.target.value })}>{cuisineOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
+              <label>Calories<select value={filters.calories} onChange={(event) => setFilters({ ...filters, calories: event.target.value })}>{['Any', 'Under 500', '500-650', '650+'].map((option) => <option key={option}>{option}</option>)}</select></label>
+              <label>Meal mood<select value={filters.tag} onChange={(event) => setFilters({ ...filters, tag: event.target.value })}>{tagOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             </div>
-            <div className="filter-panel__actions">
-              <button className="secondary" onClick={clearFilters}>Reset</button>
-              <button onClick={() => setFiltersOpen(false)}>Apply filters</button>
-            </div>
+            <div className="filter-panel__actions"><button className="secondary" onClick={clearFilters}>Reset</button><button onClick={() => setFiltersOpen(false)}>Apply filters</button></div>
           </section>
         </div>
       )}
-
       <p className="results-count">Showing {matches.length} recipe{matches.length === 1 ? '' : 's'} from {recipes.length} total.</p>
-      <div className="recipe-grid">
-        {matches.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} onAddToPlanner={onAddToPlanner} />)}
-      </div>
+      <div className="recipe-grid">{matches.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} onAddToPlanner={onAddToPlanner} />)}</div>
     </section>
   );
 }
@@ -368,128 +276,25 @@ function Recipes({ onOpen, onAddToPlanner }) {
     const text = `${recipe.title} ${recipe.description} ${recipe.protein} ${recipe.cuisine} ${ingredientText} ${tagText}`.toLowerCase();
     return text.includes(search.toLowerCase());
   });
-
-  return (
-    <section className="panel">
-      <div className="section-heading">
-        <p className="eyebrow">Recipe library</p>
-        <h2>All family dinners</h2>
-      </div>
-      <input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chicken, pasta, fakeaway, Greek, quick..." />
-      <p className="results-count">Showing {visibleRecipes.length} of {recipes.length} recipes.</p>
-      <div className="recipe-grid">
-        {visibleRecipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} onAddToPlanner={onAddToPlanner} />)}
-      </div>
-    </section>
-  );
+  return <section className="panel"><div className="section-heading"><p className="eyebrow">Recipe library</p><h2>All family dinners</h2></div><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chicken, pasta, fakeaway, Greek, quick..." /><p className="results-count">Showing {visibleRecipes.length} of {recipes.length} recipes.</p><div className="recipe-grid">{visibleRecipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} onAddToPlanner={onAddToPlanner} />)}</div></section>;
 }
 
 function AutoPlanner({ setPlanner }) {
   const [options, setOptions] = useState({ dinnerCount: '5', mood: 'Any', maxTime: '45', calories: 'Any', includeVegetarian: 'Yes' });
-
   function generatePlan() {
     const picks = buildAutoPlan(options);
     const nextPlanner = { ...emptyPlanner };
-    picks.forEach((recipe, index) => {
-      nextPlanner[days[index]] = { recipeId: recipe.id, servings: recipe.servings || defaultServings };
-    });
+    picks.forEach((recipe, index) => { nextPlanner[days[index]] = { recipeId: recipe.id, servings: recipe.servings || defaultServings }; });
     setPlanner(nextPlanner);
   }
-
-  return (
-    <section className="auto-planner">
-      <div>
-        <p className="eyebrow">Auto meal planner</p>
-        <h3>Build me a week</h3>
-      </div>
-      <div className="filter-grid">
-        <label>Dinners
-          <select value={options.dinnerCount} onChange={(event) => setOptions({ ...options, dinnerCount: event.target.value })}>
-            {[3, 4, 5, 6, 7].map((count) => <option key={count} value={count}>{count}</option>)}
-          </select>
-        </label>
-        <label>Mood
-          <select value={options.mood} onChange={(event) => setOptions({ ...options, mood: event.target.value })}>
-            {tagOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-        </label>
-        <label>Max time
-          <select value={options.maxTime} onChange={(event) => setOptions({ ...options, maxTime: event.target.value })}>
-            <option value="Any">Any</option>
-            <option value="25">25 mins</option>
-            <option value="35">35 mins</option>
-            <option value="45">45 mins</option>
-            <option value="60">60 mins</option>
-          </select>
-        </label>
-        <label>Calories
-          <select value={options.calories} onChange={(event) => setOptions({ ...options, calories: event.target.value })}>
-            {['Any', 'Under 500', '500-650', '650+'].map((option) => <option key={option}>{option}</option>)}
-          </select>
-        </label>
-        <label>Include vegetarian
-          <select value={options.includeVegetarian} onChange={(event) => setOptions({ ...options, includeVegetarian: event.target.value })}>
-            {['Yes', 'No'].map((option) => <option key={option}>{option}</option>)}
-          </select>
-        </label>
-      </div>
-      <button onClick={generatePlan}>Auto-plan my week</button>
-    </section>
-  );
+  return <section className="auto-planner"><div><p className="eyebrow">Auto meal planner</p><h3>Build me a week</h3></div><div className="filter-grid"><label>Dinners<select value={options.dinnerCount} onChange={(event) => setOptions({ ...options, dinnerCount: event.target.value })}>{[3, 4, 5, 6, 7].map((count) => <option key={count} value={count}>{count}</option>)}</select></label><label>Mood<select value={options.mood} onChange={(event) => setOptions({ ...options, mood: event.target.value })}>{tagOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Max time<select value={options.maxTime} onChange={(event) => setOptions({ ...options, maxTime: event.target.value })}><option value="Any">Any</option><option value="25">25 mins</option><option value="35">35 mins</option><option value="45">45 mins</option><option value="60">60 mins</option></select></label><label>Calories<select value={options.calories} onChange={(event) => setOptions({ ...options, calories: event.target.value })}>{['Any', 'Under 500', '500-650', '650+'].map((option) => <option key={option}>{option}</option>)}</select></label><label>Include vegetarian<select value={options.includeVegetarian} onChange={(event) => setOptions({ ...options, includeVegetarian: event.target.value })}>{['Yes', 'No'].map((option) => <option key={option}>{option}</option>)}</select></label></div><button onClick={generatePlan}>Auto-plan my week</button></section>;
 }
 
 function Planner({ planner, setPlanner, onOpen }) {
-  function updateRecipe(day, recipeId) {
-    const recipe = recipes.find((item) => item.id === recipeId);
-    setPlanner({ ...planner, [day]: { recipeId, servings: recipe?.servings || defaultServings } });
-  }
-
-  function updateServings(day, servings) {
-    setPlanner({ ...planner, [day]: { ...planner[day], servings } });
-  }
-
-  function clearPlanner() {
-    setPlanner(emptyPlanner);
-  }
-
-  return (
-    <section className="panel">
-      <div className="section-heading section-heading--row">
-        <div>
-          <p className="eyebrow">Weekly planner</p>
-          <h2>Plan the week</h2>
-        </div>
-        <button className="secondary" onClick={clearPlanner}>Clear week</button>
-      </div>
-      <AutoPlanner setPlanner={setPlanner} />
-      <div className="planner-grid">
-        {days.map((day) => {
-          const entry = planner[day];
-          const selectedRecipe = recipes.find((recipe) => recipe.id === entry.recipeId);
-          return (
-            <article className="day-card" key={day}>
-              <h3>{day}</h3>
-              <select value={entry.recipeId} onChange={(event) => updateRecipe(day, event.target.value)}>
-                <option value="">Choose a dinner</option>
-                {recipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.title}</option>)}
-              </select>
-              {selectedRecipe && (
-                <>
-                  <label className="serving-control serving-control--compact">Servings
-                    <select value={entry.servings} onChange={(event) => updateServings(day, Number(event.target.value))}>
-                      {servingOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                    </select>
-                  </label>
-                  <p>{selectedRecipe.timeMinutes} mins · {selectedRecipe.calories} kcal per serving · planned for {entry.servings}</p>
-                  <button className="secondary" onClick={() => onOpen(selectedRecipe)}>Open recipe</button>
-                </>
-              )}
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
+  function updateRecipe(day, recipeId) { const recipe = recipes.find((item) => item.id === recipeId); setPlanner({ ...planner, [day]: { recipeId, servings: recipe?.servings || defaultServings } }); }
+  function updateServings(day, servings) { setPlanner({ ...planner, [day]: { ...planner[day], servings } }); }
+  function clearPlanner() { setPlanner(emptyPlanner); }
+  return <section className="panel"><div className="section-heading section-heading--row"><div><p className="eyebrow">Weekly planner</p><h2>Plan the week</h2></div><button className="secondary" onClick={clearPlanner}>Clear week</button></div><AutoPlanner setPlanner={setPlanner} /><div className="planner-grid">{days.map((day) => { const entry = planner[day]; const selectedRecipe = recipes.find((recipe) => recipe.id === entry.recipeId); return <article className="day-card" key={day}><h3>{day}</h3><select value={entry.recipeId} onChange={(event) => updateRecipe(day, event.target.value)}><option value="">Choose a dinner</option>{recipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.title}</option>)}</select>{selectedRecipe && <><label className="serving-control serving-control--compact">Servings<select value={entry.servings} onChange={(event) => updateServings(day, Number(event.target.value))}>{servingOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></label><p>{selectedRecipe.timeMinutes} mins · {selectedRecipe.calories} kcal per serving · planned for {entry.servings}</p><button className="secondary" onClick={() => onOpen(selectedRecipe)}>Open recipe</button></>}</article>; })}</div></section>;
 }
 
 function ShoppingList({ planner, checkedShopping, onCheckItem, onResetChecked }) {
@@ -498,47 +303,7 @@ function ShoppingList({ planner, checkedShopping, onCheckItem, onResetChecked })
   const visibleIngredients = ingredients.filter((ingredient) => !checkedShopping[normaliseIngredient(ingredient)]);
   const groupedIngredients = groupIngredients(visibleIngredients);
   const hiddenCount = ingredients.length - visibleIngredients.length;
-
-  return (
-    <section className="panel">
-      <div className="section-heading section-heading--row">
-        <div>
-          <p className="eyebrow">Shopping list</p>
-          <h2>Generated from your planner</h2>
-        </div>
-        {hiddenCount > 0 && <button className="secondary" onClick={onResetChecked}>Reset hidden items</button>}
-      </div>
-      {plannedMeals.length === 0 ? (
-        <div className="empty-state">Add dinners to the weekly planner and your shopping list will appear here.</div>
-      ) : visibleIngredients.length === 0 ? (
-        <div className="empty-state">All shopping items have been ticked off. Use reset hidden items to bring the list back.</div>
-      ) : (
-        <>
-          <p className="results-count">Based on {plannedMeals.length} planned dinner{plannedMeals.length === 1 ? '' : 's'}. Tick an item once bought to remove it from the list.</p>
-          <div className="planned-meal-summary">
-            {plannedMeals.map((meal) => <span key={meal.day}>{meal.day}: {meal.recipe.title} for {meal.servings}</span>)}
-          </div>
-          <div className="shopping-groups">
-            {groupedIngredients.map((group) => (
-              <section className="shopping-group" key={group.category}>
-                <h3>{group.category}</h3>
-                <ul className="shopping-list shopping-list--interactive">
-                  {group.items.map((ingredient) => (
-                    <li key={`${ingredient.item}-${ingredient.unit}`}>
-                      <button className="shopping-check" onClick={() => onCheckItem(ingredient)} aria-label={`Mark ${ingredient.item} as bought`}>
-                        <span className="shopping-checkbox">✓</span>
-                        <span>{formatIngredient(ingredient)}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        </>
-      )}
-    </section>
-  );
+  return <section className="panel"><div className="section-heading section-heading--row"><div><p className="eyebrow">Shopping list</p><h2>Generated from your planner</h2></div>{hiddenCount > 0 && <button className="secondary" onClick={onResetChecked}>Reset hidden items</button>}</div>{plannedMeals.length === 0 ? <div className="empty-state">Add dinners to the weekly planner and your shopping list will appear here.</div> : visibleIngredients.length === 0 ? <div className="empty-state">All shopping items have been ticked off. Use reset hidden items to bring the list back.</div> : <><p className="results-count">Based on {plannedMeals.length} planned dinner{plannedMeals.length === 1 ? '' : 's'}. Tick an item once bought to remove it from the list.</p><div className="planned-meal-summary">{plannedMeals.map((meal) => <span key={meal.day}>{meal.day}: {meal.recipe.title} for {meal.servings}</span>)}</div><div className="shopping-groups">{groupedIngredients.map((group) => <section className="shopping-group" key={group.category}><h3>{group.category}</h3><ul className="shopping-list shopping-list--interactive">{group.items.map((ingredient) => <li key={`${ingredient.item}-${ingredient.unit}`}><button className="shopping-check" onClick={() => onCheckItem(ingredient)} aria-label={`Mark ${ingredient.item} as bought`}><span className="shopping-checkbox">✓</span><span>{formatIngredient(ingredient)}</span></button></li>)}</ul></section>)}</div></>}</section>;
 }
 
 export default function App() {
@@ -547,15 +312,8 @@ export default function App() {
   const [planner, setPlanner] = useState(readPlanner);
   const [notice, setNotice] = useState('');
   const [checkedShopping, setCheckedShopping] = useState(readCheckedShopping);
-
-  useEffect(() => {
-    localStorage.setItem('familyDinnerPlanner', JSON.stringify(planner));
-  }, [planner]);
-
-  useEffect(() => {
-    localStorage.setItem('familyDinnerShoppingChecked', JSON.stringify(checkedShopping));
-  }, [checkedShopping]);
-
+  useEffect(() => { localStorage.setItem('familyDinnerPlanner', JSON.stringify(planner)); }, [planner]);
+  useEffect(() => { localStorage.setItem('familyDinnerShoppingChecked', JSON.stringify(checkedShopping)); }, [checkedShopping]);
   function addRecipeToPlanner(recipe) {
     const firstEmptyDay = days.find((day) => !planner[day].recipeId);
     const targetDay = firstEmptyDay || days[0];
@@ -563,42 +321,7 @@ export default function App() {
     setNotice(firstEmptyDay ? `${recipe.title} added to ${targetDay}.` : `${recipe.title} replaced Monday's dinner.`);
     setActiveTab('Weekly Planner');
   }
-
-  function checkShoppingItem(ingredient) {
-    setCheckedShopping({ ...checkedShopping, [normaliseIngredient(ingredient)]: true });
-  }
-
-  function resetCheckedShopping() {
-    setCheckedShopping({});
-  }
-
-  return (
-    <main>
-      <header className="hero">
-        <p className="eyebrow">Family Dinner Planner</p>
-        <h1>Choose dinners, plan your week and build a shopping list.</h1>
-        <p>{recipes.length} recipes, adjustable servings, protein estimates, 5-a-day counts, guided methods and shopping lists.</p>
-      </header>
-
-      {notice && (
-        <div className="notice">
-          <span>{notice}</span>
-          <button className="secondary" onClick={() => setNotice('')}>Dismiss</button>
-        </div>
-      )}
-
-      <nav className="tabs" aria-label="Main navigation">
-        {['Discover', 'Recipes', 'Weekly Planner', 'Shopping List'].map((tab) => (
-          <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>
-        ))}
-      </nav>
-
-      {activeTab === 'Discover' && <Discover onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}
-      {activeTab === 'Recipes' && <Recipes onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}
-      {activeTab === 'Weekly Planner' && <Planner planner={planner} setPlanner={setPlanner} onOpen={setSelectedRecipe} />}
-      {activeTab === 'Shopping List' && <ShoppingList planner={planner} checkedShopping={checkedShopping} onCheckItem={checkShoppingItem} onResetChecked={resetCheckedShopping} />}
-
-      <RecipeModal key={selectedRecipe?.id || 'empty'} recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} onAddToPlanner={addRecipeToPlanner} />
-    </main>
-  );
+  function checkShoppingItem(ingredient) { setCheckedShopping({ ...checkedShopping, [normaliseIngredient(ingredient)]: true }); }
+  function resetCheckedShopping() { setCheckedShopping({}); }
+  return <main><header className="hero"><p className="eyebrow">Family Dinner Planner</p><h1>Choose dinners, plan your week and build a shopping list.</h1><p>{recipes.length} recipes, adjustable servings, protein estimates, 5-a-day counts, guided methods and shopping lists.</p></header>{notice && <div className="notice"><span>{notice}</span><button className="secondary" onClick={() => setNotice('')}>Dismiss</button></div>}<nav className="tabs" aria-label="Main navigation">{['Discover', 'Recipes', 'Weekly Planner', 'Shopping List'].map((tab) => <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>)}</nav>{activeTab === 'Discover' && <Discover onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}{activeTab === 'Recipes' && <Recipes onOpen={setSelectedRecipe} onAddToPlanner={addRecipeToPlanner} />}{activeTab === 'Weekly Planner' && <Planner planner={planner} setPlanner={setPlanner} onOpen={setSelectedRecipe} />}{activeTab === 'Shopping List' && <ShoppingList planner={planner} checkedShopping={checkedShopping} onCheckItem={checkShoppingItem} onResetChecked={resetCheckedShopping} />}<RecipeModal key={selectedRecipe?.id || 'empty'} recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} onAddToPlanner={addRecipeToPlanner} /></main>;
 }
