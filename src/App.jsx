@@ -119,36 +119,59 @@ function recipeMatchesAutoPlan(recipe, options) {
   return tagMatch && timeMatch && calorieMatch;
 }
 
+function shuffleRecipes(list) {
+  const shuffled = [...list];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
 function buildAutoPlan(options) {
   const dinnerCount = Number(options.dinnerCount);
   const chosen = [];
   const usedProteins = new Set();
   const usedCuisines = new Set();
-  let candidates = recipes.filter((recipe) => recipeMatchesAutoPlan(recipe, options));
+  let candidates = shuffleRecipes(recipes.filter((recipe) => recipeMatchesAutoPlan(recipe, options)));
+
   if (options.includeVegetarian === 'Yes' && !candidates.some((recipe) => recipe.protein === 'Vegetarian')) {
-    candidates = [...candidates, ...recipes.filter((recipe) => recipe.protein === 'Vegetarian')];
+    candidates = shuffleRecipes([...candidates, ...recipes.filter((recipe) => recipe.protein === 'Vegetarian')]);
   }
-  const vegetarianPick = options.includeVegetarian === 'Yes' ? candidates.find((recipe) => recipe.protein === 'Vegetarian') : null;
-  if (vegetarianPick) chosen.push(vegetarianPick);
-  const sorted = [...candidates].filter((recipe) => !chosen.some((item) => item.id === recipe.id)).sort((a, b) => {
-    const aPenalty = (usedProteins.has(a.protein) ? 1 : 0) + (usedCuisines.has(a.cuisine) ? 1 : 0);
-    const bPenalty = (usedProteins.has(b.protein) ? 1 : 0) + (usedCuisines.has(b.cuisine) ? 1 : 0);
-    if (aPenalty !== bPenalty) return aPenalty - bPenalty;
-    return a.timeMinutes - b.timeMinutes;
-  });
-  for (const recipe of sorted) {
-    if (chosen.length >= dinnerCount) break;
-    chosen.push(recipe);
-    usedProteins.add(recipe.protein);
-    usedCuisines.add(recipe.cuisine);
+
+  if (options.includeVegetarian === 'Yes') {
+    const vegetarianPick = shuffleRecipes(candidates.filter((recipe) => recipe.protein === 'Vegetarian'))[0];
+    if (vegetarianPick) {
+      chosen.push(vegetarianPick);
+      usedProteins.add(vegetarianPick.protein);
+      usedCuisines.add(vegetarianPick.cuisine);
+    }
   }
+
+  let pool = shuffleRecipes(candidates.filter((recipe) => !chosen.some((item) => item.id === recipe.id)));
+
+  while (chosen.length < dinnerCount && pool.length > 0) {
+    const scoredPool = pool.map((recipe) => {
+      const repeatPenalty = (usedProteins.has(recipe.protein) ? 2 : 0) + (usedCuisines.has(recipe.cuisine) ? 1 : 0);
+      const quickBonus = recipe.timeMinutes <= 35 ? -0.25 : 0;
+      return { recipe, score: repeatPenalty + quickBonus + Math.random() };
+    }).sort((a, b) => a.score - b.score);
+
+    const nextRecipe = scoredPool[0].recipe;
+    chosen.push(nextRecipe);
+    usedProteins.add(nextRecipe.protein);
+    usedCuisines.add(nextRecipe.cuisine);
+    pool = pool.filter((recipe) => recipe.id !== nextRecipe.id);
+  }
+
   if (chosen.length < dinnerCount) {
-    for (const recipe of recipes) {
+    for (const recipe of shuffleRecipes(recipes)) {
       if (chosen.length >= dinnerCount) break;
       if (!chosen.some((item) => item.id === recipe.id)) chosen.push(recipe);
     }
   }
-  return chosen.slice(0, dinnerCount);
+
+  return shuffleRecipes(chosen).slice(0, dinnerCount);
 }
 
 function RecipeCard({ recipe, onOpen, onAddToPlanner }) {
