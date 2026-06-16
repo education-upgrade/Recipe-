@@ -78,6 +78,41 @@
   font-weight: 800;
 }
 
+.shopping-list--interactive {
+  list-style: none;
+  padding-left: 0;
+}
+
+.shopping-list--interactive li {
+  margin-bottom: 8px;
+}
+
+.shopping-check {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-start;
+  padding: 0.7rem 0.8rem;
+  background: white;
+  color: #172033;
+  border: 1px solid #e1d8c8;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.shopping-checkbox {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #e6f0e8;
+  color: #243928;
+  font-weight: 900;
+}
+
 @media (max-width: 650px) {
   .notice {
     align-items: stretch;
