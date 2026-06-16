@@ -2,13 +2,34 @@ import { useEffect, useMemo, useState } from 'react';
 import { recipes } from './recipes.js';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const emptyPlanner = Object.fromEntries(days.map((day) => [day, '']));
+const defaultServings = 4;
+const servingOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+const emptyPlanner = Object.fromEntries(days.map((day) => [day, { recipeId: '', servings: defaultServings }]));
 const categoryOrder = ['Meat & fish', 'Fruit & veg', 'Dairy', 'Carbs', 'Tins, jars & packets', 'Frozen', 'Herbs, spices & sauces', 'Other'];
+
+function normalisePlanner(rawPlanner) {
+  return Object.fromEntries(days.map((day) => {
+    const savedDay = rawPlanner?.[day];
+
+    if (typeof savedDay === 'string') {
+      return [day, { recipeId: savedDay, servings: defaultServings }];
+    }
+
+    if (savedDay && typeof savedDay === 'object') {
+      return [day, {
+        recipeId: savedDay.recipeId || '',
+        servings: Number(savedDay.servings) || defaultServings,
+      }];
+    }
+
+    return [day, { recipeId: '', servings: defaultServings }];
+  }));
+}
 
 function readPlanner() {
   try {
     const saved = localStorage.getItem('familyDinnerPlanner');
-    return saved ? { ...emptyPlanner, ...JSON.parse(saved) } : emptyPlanner;
+    return saved ? normalisePlanner(JSON.parse(saved)) : emptyPlanner;
   } catch {
     return emptyPlanner;
   }
@@ -19,9 +40,12 @@ function normaliseIngredient(ingredient) {
 }
 
 function formatQuantity(quantity) {
-  if (quantity === 0.5) return '1/2';
-  if (Number.isInteger(quantity)) return String(quantity);
-  return String(quantity);
+  const rounded = Math.round(quantity * 100) / 100;
+  if (rounded === 0.25) return '1/4';
+  if (rounded === 0.5) return '1/2';
+  if (rounded === 0.75) return '3/4';
+  if (Number.isInteger(rounded)) return String(rounded);
+  return String(rounded);
 }
 
 function formatIngredient(ingredient) {
@@ -29,10 +53,18 @@ function formatIngredient(ingredient) {
   return amount ? `${ingredient.item} — ${amount}` : ingredient.item;
 }
 
-function combineIngredients(plannedRecipes) {
+function scaleIngredient(ingredient, recipeServings, targetServings) {
+  const scale = targetServings / recipeServings;
+  return {
+    ...ingredient,
+    quantity: ingredient.quantity ? ingredient.quantity * scale : ingredient.quantity,
+  };
+}
+
+function combineIngredients(plannedMeals) {
   const combined = new Map();
 
-  plannedRecipes.flatMap((recipe) => recipe.ingredients).forEach((ingredient) => {
+  plannedMeals.flatMap((meal) => meal.recipe.ingredients.map((ingredient) => scaleIngredient(ingredient, meal.recipe.servings, meal.servings))).forEach((ingredient) => {
     const key = normaliseIngredient(ingredient);
     const existing = combined.get(key);
 
@@ -51,6 +83,14 @@ function groupIngredients(ingredients) {
     category,
     items: ingredients.filter((ingredient) => ingredient.category === category),
   })).filter((group) => group.items.length > 0);
+}
+
+function getPlannedMeals(planner) {
+  return days.map((day) => {
+    const entry = planner[day];
+    const recipe = recipes.find((item) => item.id === entry.recipeId);
+    return recipe ? { day, recipe, servings: entry.servings || recipe.servings } : null;
+  }).filter(Boolean);
 }
 
 function RecipeCard({ recipe, onOpen }) {
@@ -74,20 +114,29 @@ function RecipeCard({ recipe, onOpen }) {
 }
 
 function RecipeModal({ recipe, onClose }) {
+  const [servings, setServings] = useState(recipe?.servings || defaultServings);
+
   if (!recipe) return null;
+
+  const scaledIngredients = recipe.ingredients.map((ingredient) => scaleIngredient(ingredient, recipe.servings, servings));
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <section className="modal" onClick={(event) => event.stopPropagation()}>
         <button className="modal__close" onClick={onClose}>Close</button>
-        <p className="eyebrow">{recipe.protein} · {recipe.cuisine} · {recipe.timeMinutes} mins · Serves {recipe.servings}</p>
+        <p className="eyebrow">{recipe.protein} · {recipe.cuisine} · {recipe.timeMinutes} mins · Base recipe serves {recipe.servings}</p>
         <h2>{recipe.title}</h2>
         <p>{recipe.description}</p>
+        <label className="serving-control">Show ingredients for
+          <select value={servings} onChange={(event) => setServings(Number(event.target.value))}>
+            {servingOptions.map((option) => <option key={option} value={option}>{option} serving{option === 1 ? '' : 's'}</option>)}
+          </select>
+        </label>
         <div className="modal-grid">
           <div>
             <h3>Ingredients</h3>
             <ul>
-              {recipe.ingredients.map((ingredient) => <li key={`${ingredient.item}-${ingredient.unit}`}>{formatIngredient(ingredient)}</li>)}
+              {scaledIngredients.map((ingredient) => <li key={`${ingredient.item}-${ingredient.unit}`}>{formatIngredient(ingredient)}</li>)}
             </ul>
           </div>
           <div>
@@ -181,8 +230,13 @@ function Recipes({ onOpen }) {
 }
 
 function Planner({ planner, setPlanner }) {
-  function updateDay(day, recipeId) {
-    setPlanner({ ...planner, [day]: recipeId });
+  function updateRecipe(day, recipeId) {
+    const recipe = recipes.find((item) => item.id === recipeId);
+    setPlanner({ ...planner, [day]: { recipeId, servings: recipe?.servings || defaultServings } });
+  }
+
+  function updateServings(day, servings) {
+    setPlanner({ ...planner, [day]: { ...planner[day], servings } });
   }
 
   function clearPlanner() {
@@ -200,15 +254,25 @@ function Planner({ planner, setPlanner }) {
       </div>
       <div className="planner-grid">
         {days.map((day) => {
-          const selectedRecipe = recipes.find((recipe) => recipe.id === planner[day]);
+          const entry = planner[day];
+          const selectedRecipe = recipes.find((recipe) => recipe.id === entry.recipeId);
           return (
             <article className="day-card" key={day}>
               <h3>{day}</h3>
-              <select value={planner[day]} onChange={(event) => updateDay(day, event.target.value)}>
+              <select value={entry.recipeId} onChange={(event) => updateRecipe(day, event.target.value)}>
                 <option value="">Choose a dinner</option>
                 {recipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.title}</option>)}
               </select>
-              {selectedRecipe && <p>{selectedRecipe.timeMinutes} mins · {selectedRecipe.calories} kcal · serves {selectedRecipe.servings}</p>}
+              {selectedRecipe && (
+                <>
+                  <label className="serving-control serving-control--compact">Servings
+                    <select value={entry.servings} onChange={(event) => updateServings(day, Number(event.target.value))}>
+                      {servingOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </label>
+                  <p>{selectedRecipe.timeMinutes} mins · {selectedRecipe.calories} kcal per serving · planned for {entry.servings}</p>
+                </>
+              )}
             </article>
           );
         })}
@@ -218,8 +282,8 @@ function Planner({ planner, setPlanner }) {
 }
 
 function ShoppingList({ planner }) {
-  const plannedRecipes = days.map((day) => recipes.find((recipe) => recipe.id === planner[day])).filter(Boolean);
-  const ingredients = combineIngredients(plannedRecipes);
+  const plannedMeals = getPlannedMeals(planner);
+  const ingredients = combineIngredients(plannedMeals);
   const groupedIngredients = groupIngredients(ingredients);
 
   return (
@@ -228,11 +292,14 @@ function ShoppingList({ planner }) {
         <p className="eyebrow">Shopping list</p>
         <h2>Generated from your planner</h2>
       </div>
-      {plannedRecipes.length === 0 ? (
+      {plannedMeals.length === 0 ? (
         <div className="empty-state">Add dinners to the weekly planner and your shopping list will appear here.</div>
       ) : (
         <>
-          <p className="results-count">Based on {plannedRecipes.length} planned dinner{plannedRecipes.length === 1 ? '' : 's'}. Matching ingredients are combined when they use the same unit.</p>
+          <p className="results-count">Based on {plannedMeals.length} planned dinner{plannedMeals.length === 1 ? '' : 's'}. Ingredient quantities are scaled to your chosen servings.</p>
+          <div className="planned-meal-summary">
+            {plannedMeals.map((meal) => <span key={meal.day}>{meal.day}: {meal.recipe.title} for {meal.servings}</span>)}
+          </div>
           <div className="shopping-groups">
             {groupedIngredients.map((group) => (
               <section className="shopping-group" key={group.category}>
@@ -263,7 +330,7 @@ export default function App() {
       <header className="hero">
         <p className="eyebrow">Family Dinner Planner</p>
         <h1>Choose dinners, plan your week and build a shopping list.</h1>
-        <p>Now with servings, ingredient quantities, combined totals and supermarket sections.</p>
+        <p>Now with adjustable servings, scaled ingredients, combined totals and supermarket sections.</p>
       </header>
 
       <nav className="tabs" aria-label="Main navigation">
@@ -277,7 +344,7 @@ export default function App() {
       {activeTab === 'Weekly Planner' && <Planner planner={planner} setPlanner={setPlanner} />}
       {activeTab === 'Shopping List' && <ShoppingList planner={planner} />}
 
-      <RecipeModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />
+      <RecipeModal key={selectedRecipe?.id || 'empty'} recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />
     </main>
   );
 }
