@@ -51,6 +51,33 @@
   margin: 0;
 }
 
+.nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.nutrition-grid div {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  background: #fff9ef;
+  border: 1px solid #e1d8c8;
+  border-radius: 18px;
+}
+
+.nutrition-grid strong {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.nutrition-grid span {
+  color: #566070;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 @media (max-width: 650px) {
   .notice {
     align-items: stretch;
