@@ -3,6 +3,7 @@ import { recipes } from './recipes.js';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const emptyPlanner = Object.fromEntries(days.map((day) => [day, '']));
+const categoryOrder = ['Meat & fish', 'Fruit & veg', 'Dairy', 'Carbs', 'Tins, jars & packets', 'Frozen', 'Herbs, spices & sauces', 'Other'];
 
 function readPlanner() {
   try {
@@ -14,7 +15,42 @@ function readPlanner() {
 }
 
 function normaliseIngredient(ingredient) {
-  return ingredient.trim().toLowerCase();
+  return `${ingredient.item}|${ingredient.unit}`.trim().toLowerCase();
+}
+
+function formatQuantity(quantity) {
+  if (quantity === 0.5) return '1/2';
+  if (Number.isInteger(quantity)) return String(quantity);
+  return String(quantity);
+}
+
+function formatIngredient(ingredient) {
+  const amount = ingredient.quantity ? `${formatQuantity(ingredient.quantity)}${ingredient.unit ? ` ${ingredient.unit}` : ''}` : '';
+  return amount ? `${ingredient.item} — ${amount}` : ingredient.item;
+}
+
+function combineIngredients(plannedRecipes) {
+  const combined = new Map();
+
+  plannedRecipes.flatMap((recipe) => recipe.ingredients).forEach((ingredient) => {
+    const key = normaliseIngredient(ingredient);
+    const existing = combined.get(key);
+
+    if (existing) {
+      existing.quantity += ingredient.quantity || 0;
+    } else {
+      combined.set(key, { ...ingredient, category: ingredient.category || 'Other' });
+    }
+  });
+
+  return [...combined.values()].sort((a, b) => a.item.localeCompare(b.item));
+}
+
+function groupIngredients(ingredients) {
+  return categoryOrder.map((category) => ({
+    category,
+    items: ingredients.filter((ingredient) => ingredient.category === category),
+  })).filter((group) => group.items.length > 0);
 }
 
 function RecipeCard({ recipe, onOpen }) {
@@ -29,6 +65,7 @@ function RecipeCard({ recipe, onOpen }) {
         <span>{recipe.protein}</span>
         <span>{recipe.cuisine}</span>
         <span>{recipe.calories} kcal</span>
+        <span>Serves {recipe.servings}</span>
         <span>{recipe.difficulty}</span>
       </div>
       <button onClick={() => onOpen(recipe)}>Open recipe</button>
@@ -43,14 +80,14 @@ function RecipeModal({ recipe, onClose }) {
     <div className="modal-backdrop" onClick={onClose}>
       <section className="modal" onClick={(event) => event.stopPropagation()}>
         <button className="modal__close" onClick={onClose}>Close</button>
-        <p className="eyebrow">{recipe.protein} · {recipe.cuisine} · {recipe.timeMinutes} mins</p>
+        <p className="eyebrow">{recipe.protein} · {recipe.cuisine} · {recipe.timeMinutes} mins · Serves {recipe.servings}</p>
         <h2>{recipe.title}</h2>
         <p>{recipe.description}</p>
         <div className="modal-grid">
           <div>
             <h3>Ingredients</h3>
             <ul>
-              {recipe.ingredients.map((ingredient) => <li key={ingredient}>{ingredient}</li>)}
+              {recipe.ingredients.map((ingredient) => <li key={`${ingredient.item}-${ingredient.unit}`}>{formatIngredient(ingredient)}</li>)}
             </ul>
           </div>
           <div>
@@ -123,7 +160,8 @@ function Discover({ onOpen }) {
 function Recipes({ onOpen }) {
   const [search, setSearch] = useState('');
   const visibleRecipes = recipes.filter((recipe) => {
-    const text = `${recipe.title} ${recipe.description} ${recipe.protein} ${recipe.cuisine} ${recipe.ingredients.join(' ')}`.toLowerCase();
+    const ingredientText = recipe.ingredients.map((ingredient) => ingredient.item).join(' ');
+    const text = `${recipe.title} ${recipe.description} ${recipe.protein} ${recipe.cuisine} ${ingredientText}`.toLowerCase();
     return text.includes(search.toLowerCase());
   });
 
@@ -170,7 +208,7 @@ function Planner({ planner, setPlanner }) {
                 <option value="">Choose a dinner</option>
                 {recipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.title}</option>)}
               </select>
-              {selectedRecipe && <p>{selectedRecipe.timeMinutes} mins · {selectedRecipe.calories} kcal · {selectedRecipe.protein}</p>}
+              {selectedRecipe && <p>{selectedRecipe.timeMinutes} mins · {selectedRecipe.calories} kcal · serves {selectedRecipe.servings}</p>}
             </article>
           );
         })}
@@ -181,7 +219,8 @@ function Planner({ planner, setPlanner }) {
 
 function ShoppingList({ planner }) {
   const plannedRecipes = days.map((day) => recipes.find((recipe) => recipe.id === planner[day])).filter(Boolean);
-  const ingredients = [...new Map(plannedRecipes.flatMap((recipe) => recipe.ingredients).map((ingredient) => [normaliseIngredient(ingredient), ingredient])).values()].sort();
+  const ingredients = combineIngredients(plannedRecipes);
+  const groupedIngredients = groupIngredients(ingredients);
 
   return (
     <section className="panel">
@@ -193,10 +232,17 @@ function ShoppingList({ planner }) {
         <div className="empty-state">Add dinners to the weekly planner and your shopping list will appear here.</div>
       ) : (
         <>
-          <p className="results-count">Based on {plannedRecipes.length} planned dinner{plannedRecipes.length === 1 ? '' : 's'}.</p>
-          <ul className="shopping-list">
-            {ingredients.map((ingredient) => <li key={ingredient}>{ingredient}</li>)}
-          </ul>
+          <p className="results-count">Based on {plannedRecipes.length} planned dinner{plannedRecipes.length === 1 ? '' : 's'}. Matching ingredients are combined when they use the same unit.</p>
+          <div className="shopping-groups">
+            {groupedIngredients.map((group) => (
+              <section className="shopping-group" key={group.category}>
+                <h3>{group.category}</h3>
+                <ul className="shopping-list">
+                  {group.items.map((ingredient) => <li key={`${ingredient.item}-${ingredient.unit}`}>{formatIngredient(ingredient)}</li>)}
+                </ul>
+              </section>
+            ))}
+          </div>
         </>
       )}
     </section>
@@ -217,7 +263,7 @@ export default function App() {
       <header className="hero">
         <p className="eyebrow">Family Dinner Planner</p>
         <h1>Choose dinners, plan your week and build a shopping list.</h1>
-        <p>Simple local-first prototype: no loading states, no APIs, no hidden recipe data.</p>
+        <p>Now with servings, ingredient quantities, combined totals and supermarket sections.</p>
       </header>
 
       <nav className="tabs" aria-label="Main navigation">
