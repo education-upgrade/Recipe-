@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { recipes as baseRecipes } from './recipes.js';
 import { extraRecipes } from './extraRecipes.js';
+import { getDetailedMethod, getRecipeNutrition } from './recipeDetails.js';
 
 const recipes = [...baseRecipes, ...extraRecipes];
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -174,6 +175,8 @@ function buildAutoPlan(options) {
 }
 
 function RecipeCard({ recipe, onOpen, onAddToPlanner }) {
+  const nutrition = getRecipeNutrition(recipe, recipe.servings);
+
   return (
     <article className="recipe-card">
       <div className="recipe-card__header">
@@ -185,9 +188,11 @@ function RecipeCard({ recipe, onOpen, onAddToPlanner }) {
         <span>{recipe.protein}</span>
         <span>{recipe.cuisine}</span>
         <span>{recipe.calories} kcal</span>
+        <span>{nutrition.proteinPerServing}g protein</span>
+        <span>{nutrition.fiveADayPerServing} of 5-a-day</span>
         <span>Serves {recipe.servings}</span>
         <span>{recipe.difficulty}</span>
-        {(recipe.tags || []).slice(0, 3).map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
+        {(recipe.tags || []).slice(0, 2).map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
       </div>
       <div className="button-row">
         <button onClick={() => onOpen(recipe)}>Open recipe</button>
@@ -203,6 +208,8 @@ function RecipeModal({ recipe, onClose, onAddToPlanner }) {
   if (!recipe) return null;
 
   const scaledIngredients = recipe.ingredients.map((ingredient) => scaleIngredient(ingredient, recipe.servings, servings));
+  const detailedMethod = getDetailedMethod(recipe);
+  const nutrition = getRecipeNutrition(recipe, servings);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -211,6 +218,12 @@ function RecipeModal({ recipe, onClose, onAddToPlanner }) {
         <p className="eyebrow">{recipe.protein} · {recipe.cuisine} · {recipe.timeMinutes} mins · Base recipe serves {recipe.servings}</p>
         <h2>{recipe.title}</h2>
         <p>{recipe.description}</p>
+        <div className="nutrition-grid">
+          <div><strong>{recipe.calories}</strong><span>kcal per serving</span></div>
+          <div><strong>{nutrition.proteinPerServing}g</strong><span>protein per serving</span></div>
+          <div><strong>{nutrition.fiveADayPerServing}</strong><span>of your 5-a-day</span></div>
+          <div><strong>{servings}</strong><span>planned servings</span></div>
+        </div>
         {(recipe.tags || []).length > 0 && (
           <div className="tag-row tag-row--modal">
             {recipe.tags.map((tag) => <span key={tag}>{formatTag(tag)}</span>)}
@@ -232,9 +245,9 @@ function RecipeModal({ recipe, onClose, onAddToPlanner }) {
             </ul>
           </div>
           <div>
-            <h3>Method</h3>
+            <h3>Detailed method</h3>
             <ol>
-              {recipe.method.map((step) => <li key={step}>{step}</li>)}
+              {detailedMethod.map((step) => <li key={step}>{step}</li>)}
             </ol>
           </div>
         </div>
@@ -501,7 +514,7 @@ export default function App() {
       <header className="hero">
         <p className="eyebrow">Family Dinner Planner</p>
         <h1>Choose dinners, plan your week and build a shopping list.</h1>
-        <p>{recipes.length} recipes, adjustable servings, scaled ingredients, smart tags, auto-planning and supermarket sections.</p>
+        <p>{recipes.length} recipes, adjustable servings, protein estimates, 5-a-day counts, guided methods and shopping lists.</p>
       </header>
 
       {notice && (
