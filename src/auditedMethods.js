@@ -58,5 +58,55 @@ export const auditedMethods = {
     'Step 4 – Toss the salad. Put noodles, chicken and vegetables in a large bowl. Pour over most of the dressing and toss thoroughly with tongs. Add the rest only if needed; you want everything coated but not swimming.',
     'Step 5 – Add crunch. Roughly chop 50g peanuts and scatter over the top just before serving so they stay crunchy.',
     'Step 6 – Serve or chill. Serve straight away, or chill for up to 24 hours. If serving from the fridge, loosen with a splash of water or lime juice because the noodles absorb dressing as they sit.'
+  ],
+
+  'hidden-veg-tomato-pasta': [
+    'Step 1 – Prepare the vegetables. Finely chop the onion, carrot, courgette and red pepper. Crush the garlic. The smaller you chop everything, the faster it softens and the smoother the final sauce will be.',
+    'Step 2 – Soften slowly. Heat 1 tbsp olive oil in a large saucepan over medium heat. Add the onion, carrot, courgette and pepper with a pinch of salt. Cook for 12-15 minutes, stirring often, until soft and sweet. Do not rush this stage; it builds the flavour.',
+    'Step 3 – Add garlic and tomato. Add 2 crushed garlic cloves and cook for 1 minute. Pour in 500g passata, season with black pepper and bring to a gentle simmer.',
+    'Step 4 – Simmer. Cook the sauce for 12-15 minutes until the vegetables are completely tender and the tomato has lost its raw edge. Add a splash of water if it gets too thick before the veg is soft.',
+    'Step 5 – Blend. Use a stick blender to blend the sauce until smooth. Taste and adjust salt, pepper or a tiny pinch of sugar if the tomatoes taste sharp.',
+    'Step 6 – Cook the pasta. Cook 350g pasta in salted boiling water until al dente. Save a mug of pasta water before draining.',
+    'Step 7 – Finish. Toss pasta with the smooth sauce, loosening with pasta water if needed. Serve with 60g grated cheddar scattered over the top.'
+  ],
+
+  'cheesy-tomato-gnocchi-bake': [
+    'Step 1 – Heat the oven. Heat oven to 200°C fan / 220°C conventional. Use a medium baking dish or an ovenproof frying pan.',
+    'Step 2 – Start the sauce. Heat 1 tbsp olive oil in a wide pan over medium heat. Add 2 crushed garlic cloves and cook for 30 seconds until fragrant, then add the cherry tomatoes and cook for 4-5 minutes until they begin to split.',
+    'Step 3 – Add passata. Pour in 500g passata, season well and simmer for 6-8 minutes until slightly thickened. The sauce should still be loose enough to cook the gnocchi.',
+    'Step 4 – Add gnocchi. Stir 700g gnocchi straight into the sauce with a splash of water. Simmer for 3-4 minutes until the gnocchi start to soften and the sauce coats them.',
+    'Step 5 – Add cheese. Tear over 250g mozzarella and sprinkle with 30g parmesan. Do not stir the cheese in; leave it on top so it melts and browns.',
+    'Step 6 – Bake. Bake for 12-15 minutes until bubbling at the edges and golden in places on top.',
+    'Step 7 – Rest and finish. Rest for 5 minutes so the sauce settles. Scatter with basil just before serving.'
+  ],
+
+  'hot-honey-baked-feta': [
+    'Step 1 – Heat the oven. Heat oven to 200°C fan / 220°C conventional. Choose a baking dish where the feta and tomatoes fit snugly rather than spread out too thinly.',
+    'Step 2 – Prepare the tray. Put the feta blocks in the centre of the dish. Add cherry tomatoes and thinly sliced red onion around them. Drizzle with 1 tbsp olive oil and season the tomatoes with black pepper.',
+    'Step 3 – Add heat and sweetness. Sprinkle 1 tsp chilli flakes over the feta and tomatoes, then drizzle 2 tbsp honey mostly over the feta. Do not add much salt because feta is already salty.',
+    'Step 4 – Bake. Bake for 20-25 minutes until the tomatoes burst, the onion softens and the feta is hot and starting to brown at the edges.',
+    'Step 5 – Warm the flatbreads. While the feta bakes, warm the flatbreads in a dry pan or wrap in foil and put in the oven for the final 5 minutes.',
+    'Step 6 – Finish. Gently crush some of the tomatoes with a spoon so their juices mix with the honey and feta. The dish should be saucy, salty, sweet and spicy.',
+    'Step 7 – Serve. Serve immediately with warm flatbreads for scooping. Add olives, basil or salad alongside if you have them.'
+  ],
+
+  'slow-cooker-bbq-pulled-pork': [
+    'Step 1 – Prepare the slow cooker. Slice the onion and spread it across the base of the slow cooker. This lifts the pork slightly and flavours the sauce.',
+    'Step 2 – Season the pork. Pat 1.2kg pork shoulder dry. Rub all over with 2 tsp smoked paprika, 1 tbsp brown sugar, salt and black pepper.',
+    'Step 3 – Add sauce. Place the pork on top of the onions. Pour over 250ml BBQ sauce and 2 tbsp apple cider vinegar. Turn the pork once so it is coated, then leave it sitting fat-side up if there is a fatty side.',
+    'Step 4 – Slow cook. Cook on LOW for 7-8 hours or HIGH for 4-5 hours, until the pork is very tender and pulls apart easily with two forks. Do not keep lifting the lid or it will lose heat.',
+    'Step 5 – Shred. Lift the pork onto a board and shred with two forks. Skim excess fat from the sauce if needed, then return the shredded pork to the slow cooker.',
+    'Step 6 – Thicken if needed. Cook uncovered on HIGH for 15-20 minutes if the sauce looks too thin. The pork should be glossy and coated, not watery.',
+    'Step 7 – Serve. Pile into burger buns, loaded potatoes or bowls. Add slaw, pickles or salad to cut through the richness.'
+  ],
+
+  'simple-coq-au-vin': [
+    'Step 1 – Brown the bacon and chicken. Heat a large casserole over medium-high heat. Cook 150g bacon lardons for 4-5 minutes until golden, then lift out. Season 800g chicken thighs and brown for 5-6 minutes, turning once. Remove to a plate.',
+    'Step 2 – Cook the vegetables. Add the shallots to the pan and cook for 5 minutes until lightly golden. Add mushrooms and cook for 5-6 minutes until their liquid evaporates. Add 3 crushed garlic cloves for the final minute.',
+    'Step 3 – Build the braise. Return the bacon and chicken to the pan. Stir in the red wine stock pot and pour in 400ml chicken stock, scraping the bottom of the pan to lift all the browned flavour.',
+    'Step 4 – Simmer gently. Bring to a bubble, then reduce to low. Cover and simmer for 35-40 minutes until the chicken is tender and cooked through. Turn the chicken once during cooking.',
+    'Step 5 – Reduce the sauce. Remove the lid and simmer for another 8-10 minutes until the sauce is glossy and slightly thickened. If it tastes too strong, add a splash of water; if too thin, simmer a little longer.',
+    'Step 6 – Prepare the mash. Warm or prepare 800g mashed potatoes while the chicken finishes. Keep it soft enough to soak up the sauce.',
+    'Step 7 – Serve. Taste the sauce for seasoning. Serve chicken, mushrooms, shallots and bacon over mash with plenty of sauce spooned over.'
   ]
 };
