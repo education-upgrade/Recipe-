@@ -1,3 +1,5 @@
+import { auditedMethods } from './auditedMethods.js';
+
 const proteinLookup = {
   chicken: 0.31,
   turkey: 0.29,
@@ -193,7 +195,14 @@ function finalStep(recipe) {
   return 'Final check — taste before serving and adjust with salt, pepper, lemon, herbs or chilli. Serve while the hot elements are still hot and the fresh elements still crisp.';
 }
 
+function hasIndividualMethod(recipe) {
+  return Array.isArray(recipe.method) && recipe.method.some((step) => step.trim().toLowerCase().startsWith('step '));
+}
+
 export function getDetailedMethod(recipe) {
+  if (auditedMethods[recipe.id]) return auditedMethods[recipe.id];
+  if (hasIndividualMethod(recipe)) return recipe.method;
+
   const prepTime = Math.max(5, Math.min(25, Math.round(recipe.timeMinutes * 0.3)));
   const steps = [prepStep(recipe, prepTime)];
   const carb = carbStep(recipe);
