@@ -1,4 +1,10 @@
 import { auditedMethods } from './auditedMethods.js';
+import { auditedMethodsBatch2 } from './auditedMethodsBatch2.js';
+
+const allAuditedMethods = {
+  ...auditedMethods,
+  ...auditedMethodsBatch2,
+};
 
 const proteinLookup = {
   chicken: 0.31,
@@ -200,7 +206,7 @@ function hasIndividualMethod(recipe) {
 }
 
 export function getDetailedMethod(recipe) {
-  if (auditedMethods[recipe.id]) return auditedMethods[recipe.id];
+  if (allAuditedMethods[recipe.id]) return allAuditedMethods[recipe.id];
   if (hasIndividualMethod(recipe)) return recipe.method;
 
   const prepTime = Math.max(5, Math.min(25, Math.round(recipe.timeMinutes * 0.3)));
