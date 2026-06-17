@@ -1,9 +1,11 @@
 import { auditedMethods } from './auditedMethods.js';
 import { auditedMethodsBatch2 } from './auditedMethodsBatch2.js';
+import { auditedMethodsBatch3 } from './auditedMethodsBatch3.js';
 
 const allAuditedMethods = {
   ...auditedMethods,
   ...auditedMethodsBatch2,
+  ...auditedMethodsBatch3,
 };
 
 const proteinLookup = {
