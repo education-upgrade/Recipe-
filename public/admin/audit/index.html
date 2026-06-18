@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recipe Method Audit</title>
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fbf7ef; color: #202833; }
+    main { max-width: 980px; margin: 0 auto; padding: 28px 18px 48px; }
+    .hero, .panel { background: #fffdf8; border: 1px solid #e6dccb; border-radius: 28px; padding: 24px; box-shadow: 0 18px 50px rgba(31,41,51,0.08); margin-bottom: 18px; }
+    .eyebrow { margin: 0 0 8px; text-transform: uppercase; letter-spacing: .14em; font-size: .75rem; font-weight: 800; color: #9b6b43; }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.2rem); line-height: .95; }
+    h2 { margin: 0 0 14px; font-size: 1.5rem; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
+    .stat { background: #f3eee5; border-radius: 18px; padding: 16px; }
+    .stat strong { display: block; font-size: 2rem; }
+    .stat span { color: #697386; font-weight: 700; font-size: .9rem; }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 16px; }
+    th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #e6dccb; vertical-align: top; }
+    th { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: #697386; }
+    .ok { color: #1f7a4d; font-weight: 800; }
+    .warn { color: #b45309; font-weight: 800; }
+    .note { color: #697386; line-height: 1.5; }
+    @media (max-width: 720px) { .grid { grid-template-columns: repeat(2, 1fr); } th:nth-child(2), td:nth-child(2) { display: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Admin Audit</p>
+      <h1>Recipe method coverage</h1>
+      <p class="note">This static audit page tracks the current method-upgrade work in the Recipe app.</p>
+      <div class="grid">
+        <div class="stat"><strong>57</strong><span>Total recipes</span></div>
+        <div class="stat"><strong>56</strong><span>Audited / individual</span></div>
+        <div class="stat"><strong>1</strong><span>Needs attention</span></div>
+        <div class="stat"><strong>98%</strong><span>Coverage</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Still needing individual audit</h2>
+      <table>
+        <thead><tr><th>Recipe</th><th>ID</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Harissa Lamb Flatbreads</td><td>lamb-harissa-flatbreads</td><td class="warn">Generic / short method</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Audited coverage summary</h2>
+      <p class="note">The 20 core recipes have individual step-by-step methods. The imported and custom recipes have been upgraded through audited method batches 1–6. The only recipe still identified as requiring a full hand-written method is Harissa Lamb Flatbreads.</p>
+    </section>
+  </main>
+</body>
+</html>
