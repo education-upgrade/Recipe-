@@ -101,6 +101,16 @@ function fallbackMethod(recipe) {
   ];
 }
 
+export function getRecipeMethodStatus(recipe) {
+  if (allAuditedMethods[recipe.id]) return 'Audited override';
+  if (hasIndividualMethod(recipe)) return 'Individual core method';
+  return 'Generic / short method';
+}
+
+export function isRecipeAudited(recipe) {
+  return getRecipeMethodStatus(recipe) !== 'Generic / short method';
+}
+
 export function getDetailedMethod(recipe) {
   if (allAuditedMethods[recipe.id]) return allAuditedMethods[recipe.id];
   if (hasIndividualMethod(recipe)) return recipe.method;
