@@ -1,6 +1,7 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import './newRecipeBatch1.js'
+import './newRecipeBatch2.js'
 import App from './App.jsx'
 import './styles.css'
 import './plannerExtras.css'
